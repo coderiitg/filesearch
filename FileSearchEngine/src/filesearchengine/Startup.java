@@ -7,6 +7,9 @@ import filesearchengine.common.DocInfo;
 import filesearchengine.process.IndexBuilder;
 import filesearchengine.process.MainQueryProcess;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import java.util.Map;
 
 public class Startup {
@@ -25,7 +28,14 @@ public class Startup {
     
     public static void main(String[] args) {
         IndexBuilder obj = new IndexBuilder();
-        CorpusType corpusInfo = obj.getCorpusInfo("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir");
+        CorpusType corpusInfo = null;
+        try {
+            corpusInfo = obj.getCorpusInfo("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         //obj.displayIndex();
         
         MainQueryProcess mainProc = new MainQueryProcess(corpusInfo);
@@ -33,6 +43,6 @@ public class Startup {
         //Query with search terms
         Map<Integer, Float> docScoreMap = mainProc.searchQuery("rajiv india");
         //Display result in order of relevance
-        Startup.displayResult(CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/), corpusInfo.getDocIdFileMap());
+        Startup.displayResult(CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/), corpusInfo.getDocIdInfoMap());
     }
 }

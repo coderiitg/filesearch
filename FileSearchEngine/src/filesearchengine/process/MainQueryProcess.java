@@ -72,7 +72,7 @@ public class MainQueryProcess {
     }
     
     public class QueryThread extends Thread{
-        Map<Integer, DocInfo> docIdFileMap = corpusInfo.getDocIdFileMap();
+        Map<Integer, DocInfo> docIdInfoMap = corpusInfo.getDocIdInfoMap();
         int totalThreadCount = 0;
         int threadIndex = -1;
         
@@ -106,7 +106,7 @@ public class MainQueryProcess {
         
         @Override
         public void run(){
-            for(Integer docId : docIdFileMap.keySet()){
+            for(Integer docId : docIdInfoMap.keySet()){
                 //Each docId has to be processed by a unique thread
                 if(docId % totalThreadCount == threadIndex){
                     Float score = getScore(docId);

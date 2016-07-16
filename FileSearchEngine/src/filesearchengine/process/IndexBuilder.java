@@ -2,7 +2,6 @@ package filesearchengine.process;
 
 import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
-
 import filesearchengine.common.DocInfo;
 
 import java.io.BufferedReader;
@@ -33,7 +32,7 @@ public class IndexBuilder {
      * Key - Index associated with it
      * Value - DocInfo of the document
      */
-    Map<Integer, DocInfo> docIdFileMap = new HashMap<Integer, DocInfo>();
+    Map<Integer, DocInfo> docIdInfoMap = new HashMap<Integer, DocInfo>();
     
     /*
     Key - Term
@@ -64,7 +63,7 @@ public class IndexBuilder {
         if(!fileDocIdMap.containsKey(filePath)){
             fileDocIdMap.put(filePath, ++nextDocIndex);
             //Create a new Doc Information object and put it in a map
-            docIdFileMap.put(nextDocIndex, new DocInfo(nextDocIndex, filePath));
+            docIdInfoMap.put(nextDocIndex, new DocInfo(nextDocIndex, filePath));
         }
         
         Integer curDocId = fileDocIdMap.get(filePath);
@@ -98,7 +97,7 @@ public class IndexBuilder {
      *
      * @param file
      */
-    private void readFile(File file){
+    private void readFile(File file) throws FileNotFoundException, IOException {
         BufferedReader is = null;
 
         try {
@@ -120,11 +119,6 @@ public class IndexBuilder {
                     }
                 }
             }
-        } catch (FileNotFoundException e) {
-            System.out.println("File not found at : " + file.getPath());
-        }
-        catch(IOException e){
-            System.out.println("Exception while reading : " + file.getPath());
         }
         finally{
             if(is != null){
@@ -139,7 +133,7 @@ public class IndexBuilder {
     
     private void constructIDFVector(){
         if(termDocCountMap != null && !termDocCountMap.isEmpty()){
-            int totalDocs = docIdFileMap.keySet().size();
+            int totalDocs = docIdInfoMap.keySet().size();
             
             for(String term : termDocCountMap.keySet()){
                 float termWeight = CommonUtils.round(Math.log(totalDocs/termDocCountMap.get(term)), 2);
@@ -152,7 +146,7 @@ public class IndexBuilder {
      *
      * @param rootDirFullPath
      */
-    private void reBuildIndex(String rootDirFullPath) {
+    private void reBuildIndex(String rootDirFullPath) throws FileNotFoundException, IOException {
         File dir = new File(rootDirFullPath);
         
         File[] listFiles = dir.listFiles();
@@ -186,17 +180,17 @@ public class IndexBuilder {
 
     
     //Tries to fetch Index from secondary storage memory into main memory
-    private void fetchIndexFromStorage(String rootDirFullPath){
+    private void fetchIndexFromStorage(String rootDirFullPath) throws FileNotFoundException, IOException {
         //TODO: First check whether the index is present in storage
         //need not build the index always
         reBuildIndex(rootDirFullPath);
         
     }
     
-    public CorpusType getCorpusInfo(String rootDirFullPath){
+    public CorpusType getCorpusInfo(String rootDirFullPath) throws FileNotFoundException, IOException {
         //Re-populate all the index related fields
         fetchIndexFromStorage(rootDirFullPath);
-        CorpusType corpusInfo = new CorpusType(fileDocIdMap, docIdFileMap, invertedIndex, termDocCountMap, idfVector);
+        CorpusType corpusInfo = new CorpusType(fileDocIdMap, docIdInfoMap, invertedIndex, termDocCountMap, idfVector);
         return corpusInfo;
     }
 }

@@ -15,7 +15,7 @@ public class CorpusType {
      * Key - Index associated with it
      * Value - DocInfo of the document
      */
-    Map<Integer, DocInfo> docIdFileMap = null;
+    Map<Integer, DocInfo> docIdInfoMap = null;
     
     /*
     Key - Term
@@ -46,10 +46,10 @@ public class CorpusType {
         return totalDocs;        
     }
 
-    public CorpusType(Map<String, Integer> fileDocIdMap, Map<Integer, DocInfo> docIdFileMap,
+    public CorpusType(Map<String, Integer> fileDocIdMap, Map<Integer, DocInfo> docIdInfoMap,
                       Map<String, Map<Integer, Integer>> invertedIndex, Map<String, Integer> termDocCountMap, Map<String, Float> idfVector) {
         this.fileDocIdMap = fileDocIdMap;
-        this.docIdFileMap = docIdFileMap;
+        this.docIdInfoMap = docIdInfoMap;
         this.invertedIndex = invertedIndex;
         this.termDocCountMap = termDocCountMap;  
         this.idfVector = idfVector;
@@ -59,8 +59,8 @@ public class CorpusType {
         return fileDocIdMap;
     }
     
-    public Map<Integer, DocInfo> getDocIdFileMap() {
-        return docIdFileMap;
+    public Map<Integer, DocInfo> getDocIdInfoMap() {
+        return docIdInfoMap;
     }
 
     public Map<String, Map<Integer, Integer>> getInvertedIndex() {

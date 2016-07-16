@@ -58,7 +58,7 @@
       <string v="oracle.bm.commonIde.data.project.ModelerProjectSettings/modelersContentSet"/>
       <string v="oracle.toplink.workbench.addin/toplinkContentSet"/>
    </list>
-   <value n="defaultPackage" v="filesearchengine"/>
+   <value n="defaultPackage" v="filesearchengineui"/>
    <hash n="oracle.ide.model.TechnologyScopeConfiguration">
       <list n="technologyScope">
          <string v="Java"/>
@@ -68,53 +68,10 @@
       <value n="internalEncoding" v="Cp1252"/>
       <value n="webIANAEncoding" v="windows-1252"/>
    </hash>
-   <hash n="oracle.jdeveloper.deploy.dt.DeploymentProfiles">
-      <hash n="profileDefinitions">
-         <hash n="fileSearchEngine">
-            <hash n="archiveOptions">
-               <value n="hasManifest" v="true"/>
-            </hash>
-            <hash n="fileGroups">
-               <list n="groups">
-                  <hash>
-                     <list n="contributors">
-                        <hash>
-                           <value n="type" v="2"/>
-                        </hash>
-                        <hash>
-                           <value n="type" v="7"/>
-                        </hash>
-                     </list>
-                     <value n="displayName" v="Project Output"/>
-                     <hash n="filters">
-                        <list n="rules">
-                           <hash>
-                              <value n="pattern" v="**"/>
-                              <value n="type" v="0"/>
-                           </hash>
-                        </list>
-                     </hash>
-                     <value n="internalName" v="project-output"/>
-                     <value n="type" v="1"/>
-                  </hash>
-               </list>
-            </hash>
-            <url n="jarURL" path="deploy/fileSearchEngine.jar"/>
-            <value n="profileClass" v="oracle.jdeveloper.deploy.jar.ArchiveProfile"/>
-            <value n="profileName" v="fileSearchEngine"/>
-         </hash>
-      </hash>
-      <list n="profileList">
-         <string v="fileSearchEngine"/>
-      </list>
-   </hash>
    <hash n="oracle.jdeveloper.model.PathsConfiguration">
       <hash n="javaContentSet">
          <list n="pattern-filters">
-            <string v="-filesearchengine/process/QuerySubProcess.java"/>
-            <string v="-filesearchengine/common/TermInfo.java"/>
-            <string v="-filesearchengine/process/package-info.java"/>
-            <string v="-filesearchengine/common/UpdateableTreeSet.java"/>
+            <string v="-filesearchengineui/view/TestListModel.java"/>
             <string v="+**"/>
          </list>
          <list n="url-path">
@@ -123,12 +80,31 @@
       </hash>
    </hash>
    <hash n="oracle.jdevimpl.config.JProjectLibraries">
-      <list n="exportedReferences"/>
+      <list n="exportedReferences">
+         <hash>
+            <value n="id" v="FileSearchEngine.jar"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+      </list>
       <hash n="internalDefinitions">
-         <list n="jdkDefinitions"/>
-         <list n="libraryDefinitions"/>
+         <list n="libraryDefinitions">
+            <hash>
+               <list n="classPath">
+                  <url path="../FileSearchEngine/deploy/fileSearchEngine.jar" jar-entry=""/>
+               </list>
+               <value n="deployedByDefault" v="true"/>
+               <value n="description" v="FileSearchEngine.jar"/>
+               <value n="id" v="FileSearchEngine.jar"/>
+               <value n="locked" v="true"/>
+            </hash>
+         </list>
       </hash>
-      <list n="libraryReferences"/>
+      <list n="libraryReferences">
+         <hash>
+            <value n="id" v="FileSearchEngine.jar"/>
+            <value n="isJDK" v="false"/>
+         </hash>
+      </list>
    </hash>
    <hash n="oracle.jdevimpl.config.JProjectPaths">
       <url n="outputDirectory" path="classes/"/>
