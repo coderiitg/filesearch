@@ -37,7 +37,7 @@ public class CMDQueryProcess {
         CorpusType corpusInfo = null;
         
         try {
-            corpusInfo = obj.getCorpusInfo("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir");
+            corpusInfo = obj.getCorpusInfo(args[0]);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
