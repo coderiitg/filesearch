@@ -9,8 +9,11 @@ import filesearchengine.process.MainQueryProcess;
 
 import java.util.Map;
 
-public class Startup {
-    public Startup() {
+/*
+ * This class can be used to used the search enfine from command line
+ */
+public class CMDQueryProcess {
+    public CMDQueryProcess() {
         super();
     }
     
@@ -18,21 +21,24 @@ public class Startup {
         System.out.println("*****************Displaying the Final result*****************");
         if(docScoreMap != null && !docScoreMap.isEmpty()){
             for(Integer docId : docScoreMap.keySet()){
-                System.out.println((docIdFileMap.get(docId)).getFilePath() + " => " + docScoreMap.get(docId));
+                System.out.println((docIdFileMap.get(docId)).getFilePath());
             }
         }
     }
     
     public static void main(String[] args) {
+        if(args == null || args.length != 2)
+            System.out.println("This program accepts two parameters: 1.Full Path of Directory to be searched and 2.String that has to be searched");
+        
         IndexBuilder obj = new IndexBuilder();
-        CorpusType corpusInfo = obj.getCorpusInfo("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir");
+        CorpusType corpusInfo = obj.getCorpusInfo(args[0]);
         //obj.displayIndex();
         
         MainQueryProcess mainProc = new MainQueryProcess(corpusInfo);
         
         //Query with search terms
-        Map<Integer, Float> docScoreMap = mainProc.searchQuery("rajiv india");
+        Map<Integer, Float> docScoreMap = mainProc.searchQuery(args[1]);
         //Display result in order of relevance
-        Startup.displayResult(CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/), corpusInfo.getDocIdFileMap());
+        CMDQueryProcess.displayResult(CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/), corpusInfo.getDocIdFileMap());
     }
 }

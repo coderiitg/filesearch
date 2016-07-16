@@ -24,5 +24,6 @@
    </list>
    <list n="listOfChildren">
       <hash><url n="URL" path="FileSearchEngine/FileSearchEngine.jpr"/></hash>
+      <hash><url n="URL" path="FileSearchEngineUI/FileSearchEngineUI.jpr"/></hash>
    </list>
 </jws:workspace>
