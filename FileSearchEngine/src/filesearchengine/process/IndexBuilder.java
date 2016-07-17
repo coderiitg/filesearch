@@ -2,6 +2,7 @@ package filesearchengine.process;
 
 import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
+import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
 import filesearchengine.common.TokenNormalizer;
 
@@ -12,8 +13,12 @@ import java.io.FileReader;
 import java.io.IOException;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 
 public class IndexBuilder {
@@ -28,7 +33,7 @@ public class IndexBuilder {
      * Key - Full file path of a Document
      * Value - Index associated with it
      */
-    Map<String, Integer> fileDocIdMap = new HashMap<String, Integer>();
+    Map<String, Integer> fileDocIdMap = new TreeMap<String, Integer>();
     
     /*
      * Key - Index associated with it
@@ -62,22 +67,16 @@ public class IndexBuilder {
     
     /**
      *Insert a term into index
-     * @param filePath
+     * @param docId - the Document Id of doc which contains the term
      * @param term
      */
-    private void insertTerm(String filePath, String term){
-        if(!fileDocIdMap.containsKey(filePath)){
-            fileDocIdMap.put(filePath, ++nextDocIndex);
-            //Create a new Doc Information object and put it in a map
-            docIdInfoMap.put(nextDocIndex, new DocInfo(nextDocIndex, filePath));
-        }
+    private void insertTerm(int docId, String term){
         
-        Integer curDocId = fileDocIdMap.get(filePath);
         
         if(!invertedIndex.containsKey(term)){
             Map<Integer, Integer> docIdFreqMap = new HashMap<Integer, Integer>();
             //Insert doc info
-            docIdFreqMap.put(curDocId, 1);
+            docIdFreqMap.put(docId, 1);
             //Insert the map into invertedIndex
             invertedIndex.put(term, docIdFreqMap);
             //Set the Document Count against the term
@@ -86,13 +85,13 @@ public class IndexBuilder {
         else{
             //Iterate through docIdFreqMap
             Map<Integer, Integer> docIdFreqMap = invertedIndex.get(term);
-            Integer curDocIdFreq = docIdFreqMap.get(curDocId);
+            Integer curDocIdFreq = docIdFreqMap.get(docId);
             if(curDocIdFreq != null){
-                docIdFreqMap.put(curDocId, ++curDocIdFreq);
+                docIdFreqMap.put(docId, ++curDocIdFreq);
             }
             else{
                 //Insert doc info
-                docIdFreqMap.put(curDocId, 1);
+                docIdFreqMap.put(docId, 1);
                 //Set the Document Count against the term
                 termDocCountMap.put(term, 1);
             }
@@ -109,20 +108,30 @@ public class IndexBuilder {
         try {
             is = new BufferedReader(new FileReader(file));
             String line = null;
+            String filePath = file.getCanonicalPath();
+            
+            //Check whether file is already indexed
+            if(!fileDocIdMap.containsKey(filePath)){
+                //If not create a new index
+                fileDocIdMap.put(filePath, ++nextDocIndex);
+                //Create a new Doc Information object and put it in a map
+                docIdInfoMap.put(nextDocIndex, new DocInfo(nextDocIndex, filePath));
+            }
+            
+            Integer docId = fileDocIdMap.get(filePath);
             
             while((line = is.readLine()) != null){
                 //Get the normalized tokens from line i.e string values that can be considered as words
                 List<String> normalizedTokens = TokenNormalizer.getNormalizedTokens(line);
                 if(normalizedTokens != null){
                     for(String token : normalizedTokens){
-                        insertTerm(file.getPath(), token);
+                        insertTerm(docId, token);
                     }
                 }
             }
             
             //Set the last modified date in document info
-            String filePath = file.getPath();
-            int docId = fileDocIdMap.get(filePath);
+
             DocInfo docInfo = docIdInfoMap.get(docId);
             //Get the last modified date of file
             Long lastModifiedDate = file.lastModified();
@@ -183,6 +192,29 @@ public class IndexBuilder {
         }
     }
     
+    /**
+     *
+     * @param dirPath
+     * @param retainFiles
+     */
+    private void cleanupDelFileInDir(String dirPath, Set<String> retainFiles){
+        //Get the submap of the dirPath files alone
+        final Map<String, Integer> indexSubMapOfDir = CommonUtils.getPrefixedKeyValues((SortedMap<String, Integer>)fileDocIdMap, dirPath);
+        
+        if(indexSubMapOfDir != null && !indexSubMapOfDir.isEmpty()){
+            //Get the indexed files list in the dir
+            Set<String> indexedFilesOfDir = new HashSet<String>(indexSubMapOfDir.keySet());
+            //Remove the retainFiles list
+            indexedFilesOfDir.removeAll(retainFiles);
+            if(indexedFilesOfDir != null && !indexedFilesOfDir.isEmpty()){
+                //deleted files are present in indexedFilesOfDir
+                for(String deletedFile : indexedFilesOfDir){
+                    remFileFromIndex(deletedFile);
+                }
+            }
+        }
+    }
+    
     private void constructIDFVector(){
         if(termDocCountMap != null && !termDocCountMap.isEmpty()){
             int totalDocs = docIdInfoMap.keySet().size();
@@ -194,6 +226,7 @@ public class IndexBuilder {
         }
     }
     
+    
     /**
      *
      * @param rootDirFullPath
@@ -202,22 +235,38 @@ public class IndexBuilder {
      */
     private void reBuildIndex(String rootDirFullPath) throws FileNotFoundException, IOException {
         File rootDir = new File(rootDirFullPath);
-        reBuildIndex(rootDir);
+        //Stores the list of files that will be indexed
+        Set<String> curIndexedFiles = reBuildIndex(rootDir, true/*recurse*/);
+        
+        //Cleanup deleted files if any
+        cleanupDelFileInDir(rootDirFullPath, curIndexedFiles);
+    
+        //Re-construct IDF vector
+        constructIDFVector();
     }
     
     /**
      *
      * @param rootDir
+     * @param recurse should rootDir be recursively read
+     * @return list of files that are indexed
      * @throws FileNotFoundException
      * @throws IOException
      */
-    private void reBuildIndex(File rootDir) throws FileNotFoundException, IOException {     
-        File[] listFiles = rootDir.listFiles();
+    private Set<String> reBuildIndex(File rootDir, boolean recurse) throws FileNotFoundException, IOException {
+        //Fetch only the supported files
+        File[] listFiles = rootDir.listFiles(new CustomFileFilter());
+        
+        Set<String> curIndexedFiles = new HashSet<String>();
+        
         if(listFiles != null){
             for(File childFile : listFiles){
                 if(!childFile.isDirectory()){
                     //This is not a directory
-                    String filePath = childFile.getPath();
+                    String filePath = childFile.getCanonicalPath();
+                    
+                    //Add it to the list of files indexed
+                    curIndexedFiles.add(filePath);
                     
                     if(fileDocIdMap.containsKey(filePath)){//this file was already indexed
                         //Get the docId corresponding to the filePath
@@ -238,12 +287,14 @@ public class IndexBuilder {
                     }
                     readFile(childFile);
                 }
-                else{//recurse further
-                    reBuildIndex(childFile);
+                else if(recurse){//recurse further
+                    Set<String> childIndexedFiles = reBuildIndex(childFile, recurse);
+                    //Add the list of files indexed in child
+                    curIndexedFiles.addAll(childIndexedFiles);
                 }
             }
         }
-        constructIDFVector();
+        return curIndexedFiles;
     }
     
     public void displayIndex(){
@@ -272,10 +323,41 @@ public class IndexBuilder {
         
     }
     
-    public CorpusType getCorpusInfo(String rootDirFullPath) throws FileNotFoundException, IOException {
+    /**
+     * Extracts docIdInfoMap corresponding to fileDocIdMap and returns it
+     * @param allDocInfoMap
+     * @param fileDocIdMap
+     * @return
+     */
+    private Map<Integer, DocInfo> fetchProjDocIdInfoMap(Map<Integer, DocInfo> allDocInfoMap, Map<String, Integer> fileDocIdMap){
+        Map<Integer, DocInfo> curDocIdInfoMap = new HashMap<Integer, DocInfo>();
+        if(fileDocIdMap != null){
+            for(String filePath : fileDocIdMap.keySet()){
+                //Get the docId corresponding to filePath
+                int docId = fileDocIdMap.get(filePath);
+                curDocIdInfoMap.put(docId, allDocInfoMap.get(docId));            
+            }
+        }
+        return curDocIdInfoMap;
+    }
+    
+    /**
+     *Re-constructs the index and returns the Corpus information pertaining to rootDirFullPath
+     * @param rootDirFullPath
+     * @return
+     * @throws FileNotFoundException
+     * @throws IOException
+     */
+    public CorpusType getCorpusInfo(String rootDirFullPath) throws FileNotFoundException, IOException{
         //Re-populate all the index related fields
         fetchIndexFromStorage(rootDirFullPath);
-        CorpusType corpusInfo = new CorpusType(fileDocIdMap, docIdInfoMap, invertedIndex, termDocCountMap, idfVector);
+        //restrict fileDocIdMap to only the files in rootDirFullPath
+        Map<String, Integer> projFileDocIdMap = CommonUtils.getPrefixedKeyValues((SortedMap<String, Integer>)fileDocIdMap, rootDirFullPath);
+        
+        //restrict docIdInfoMap to only the files in rootDirFullPath
+        Map<Integer, DocInfo> projDocIdInfoMap = fetchProjDocIdInfoMap(docIdInfoMap, projFileDocIdMap);
+        
+        CorpusType corpusInfo = new CorpusType(projFileDocIdMap, projDocIdInfoMap, invertedIndex, termDocCountMap, idfVector);
         return corpusInfo;
     }
 }

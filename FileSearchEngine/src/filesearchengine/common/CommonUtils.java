@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 
 
 public class CommonUtils {
@@ -148,5 +149,22 @@ public class CommonUtils {
             }
         }
         return result;
+    }
+    
+    /**
+     *Returns all key values pair submap whose key starts with prefix
+     * @param <V>
+     * @param sortedMap
+     * @param prefix
+     * @return
+     */
+    public static <V> Map<String, V> getPrefixedKeyValues(SortedMap <String, V> sortedMap, String prefix){
+        if(prefix != null && prefix.length() > 0){
+            int prefixLen = prefix.length();
+            char nextOfLastChar = (char) (prefix.charAt(prefixLen - 1) + 1);
+            String prefixEnd = prefix.substring(0, prefixLen - 1) + nextOfLastChar;
+            return sortedMap.subMap(prefix, prefixEnd);
+        }
+        return sortedMap;
     }
 }

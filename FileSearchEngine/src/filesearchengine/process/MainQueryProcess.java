@@ -125,7 +125,7 @@ public class MainQueryProcess {
         idfVector = corpusInfo.getIdfVector();
     }
     
-    public Map<Integer, Float> searchQuery(String query){
+    public Map<Integer, Float> triggerQuery(String query){
         //Get the weight vector corresponding to the query
         queryWeightVector = getQueryWeightVector(query, this.queryTerms);
         
@@ -145,7 +145,7 @@ public class MainQueryProcess {
             childThreads.add(t);
             t.start();
         }
-        
+        //Each thread will work on different set of documents and calculate the similarity score
         //wait for all the child threads to finish
         for(Thread childThread : childThreads){
             try {

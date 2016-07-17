@@ -233,21 +233,23 @@ public class FileSearchUI {
                 }
                 //Remove earlier elements if any
                 model.removeAllElements();
-                CorpusType corpusInfo = null;
                 
-                //Get the corpus info
+                //Holds the Corpus information related to the dirPath
+                CorpusType projCorpusInfo = null;
+                
+                //Get the corpus info pertaining to the current directory alone
                 try {
-                    corpusInfo = indexBuilder.getCorpusInfo(dirPath);
+                    projCorpusInfo = indexBuilder.getCorpusInfo(dirPath);
                 } catch (FileNotFoundException ex) {
                     displayError(ex.getMessage());
                 } catch (IOException ex) {
                     displayError(ex.getMessage());
                 }
                 //Initialize the query process
-                MainQueryProcess mainProc = new MainQueryProcess(corpusInfo);
+                MainQueryProcess mainProc = new MainQueryProcess(projCorpusInfo);
                 
                 //Query with search text and get the score for each document
-                Map<Integer, Float> docScoreMap = mainProc.searchQuery(searchText);
+                Map<Integer, Float> docScoreMap = mainProc.triggerQuery(searchText);
                 
                 if(docScoreMap == null || docScoreMap.isEmpty()){
                     //Display one element indicating that no results could be found
@@ -258,7 +260,7 @@ public class FileSearchUI {
                     //Sort and fetch top few results
                     Map<Integer, Float> sortedDocScoreMap = CommonUtils.sortByValue(docScoreMap, 10/*fetch top results*/);
                     //add the search results iteratively
-                    addListToModel(sortedDocScoreMap.keySet(), corpusInfo.getDocIdInfoMap());
+                    addListToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
                 }
             }
         }
