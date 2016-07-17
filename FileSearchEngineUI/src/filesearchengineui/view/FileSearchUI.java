@@ -228,7 +228,8 @@ public class FileSearchUI {
                 
                 String searchText = findText.getText();
                 String dirPath = dirPathText.getText();
-
+                boolean recursiveSearch = recursiveCheckBox.isSelected();
+                
                 if (searchText == null || searchText.isEmpty()) {
                     displayError("Find field cannot be empty!");
                     return;
@@ -245,7 +246,7 @@ public class FileSearchUI {
                 
                 //Get the corpus info pertaining to the current directory alone
                 try {
-                    projCorpusInfo = indexBuilder.getCorpusInfo(dirPath);
+                    projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, recursiveSearch);
                 } catch (FileNotFoundException ex) {
                     displayError(ex.getMessage());
                 } catch (IOException ex) {

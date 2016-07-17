@@ -66,7 +66,6 @@ public class DocumentWrapper {
     public String getData() {
         //Read the file if data is not already set
         if(data == null){
-            System.out.println("Reading afresh....");
             try {
                 data = readFile(filePath);
             } catch (FileNotFoundException e) {

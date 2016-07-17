@@ -37,7 +37,7 @@ public class CMDQueryProcess {
         CorpusType corpusInfo = null;
         
         try {
-            corpusInfo = obj.getCorpusInfo(args[0]);
+            corpusInfo = obj.getCorpusInfo(args[0], true);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
