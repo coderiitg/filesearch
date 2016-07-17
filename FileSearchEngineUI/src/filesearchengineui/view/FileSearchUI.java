@@ -12,9 +12,6 @@ import filesearchengineui.model.DocumentWrapper;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.EventQueue;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -25,9 +22,14 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
+import javax.swing.GroupLayout;
+import static javax.swing.GroupLayout.Alignment.BASELINE;
+import static javax.swing.GroupLayout.Alignment.LEADING;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -38,8 +40,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
@@ -54,7 +58,7 @@ public class FileSearchUI {
             @Override
             public void run() {
                 try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                    UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
                 } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException ex) {
                 }
 
@@ -88,75 +92,31 @@ public class FileSearchUI {
     
     public class TestPane extends JPanel {
 
-        private JTextField findText;
-        private JTextField dirPathText;
-        private JButton searchBtn;
-        private JButton browseBtn;
+        JLabel findLabel = new JLabel("Search Text");
+        JLabel dirLabel = new JLabel("Starting Folder");
+        JTextField findText = new JTextField(20);
+        JTextField dirPathText = new JTextField(20);
+        JCheckBox recursiveCheckBox = new JCheckBox("Search subfolders");
+        JButton searchBtn = new JButton("Search");
+        JButton browseBtn = new JButton("Browse");
+        JFileChooser fileChooser = new JFileChooser();
+        
         private DefaultListModel model;
         private final JTextArea fileContent = new JTextArea(5, 40);
         private IndexBuilder indexBuilder = new IndexBuilder();
         
         public TestPane() {
             setLayout(new BorderLayout());
-            JPanel searchPane = new JPanel(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
+            JPanel searchPane = new JPanel();
+            GroupLayout layout = new GroupLayout(searchPane);
+            searchPane.setLayout(layout);
             
-            gbc.gridx = 0;
-            gbc.gridy = 0;
-            gbc.insets = new Insets(2, 2, 2, 2);
+            layout.setAutoCreateGaps(true);
+            layout.setAutoCreateContainerGaps(true);
             
-            //Search Label
-            JLabel findLabel = new JLabel("Find: ");
-            //findLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            searchPane.add(findLabel, gbc);
-            
-            //Directory Label
-            //Should appear below search label
-            gbc.gridy++;
-            JLabel dirLabel = new JLabel("Directory: ");
-            //dirLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            searchPane.add(dirLabel, gbc);
-            
-            //reset the vertical position
-            gbc.gridy--;
-            
-            //Search Field
-            gbc.gridx++;
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.weightx = 1;
-            findText = new JTextField(20);
-            searchPane.add(findText, gbc);
-
-            //Directory Field
-            //should appear below search field
-            gbc.gridy++;
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.weightx = 1;            
-            dirPathText = new JTextField(20);
-            dirPathText.setEditable(false);
-            //TODO: for testing purposes only, remove
-            dirPathText.setText("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir\\");
-            searchPane.add(dirPathText, gbc);
-            
-            //reset the vertical position
-            gbc.gridy--;
-            
-            //Search Button
-            gbc.gridx++;
-            gbc.fill = GridBagConstraints.NONE;
-            gbc.weightx = 0;
-            searchBtn = new JButton("Search");
-            searchPane.add(searchBtn, gbc);
-
-            //Browse Button
-            //should appear below Search Button
-            gbc.gridy++;
-            gbc.fill = GridBagConstraints.NONE;
-            gbc.weightx = 0;
-            browseBtn = new JButton("Browse");
+            //set the Action Listener on browSeBtn
             browseBtn.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
-                    JFileChooser fileChooser = new JFileChooser();
 
                     // For Directory
                     fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -172,10 +132,42 @@ public class FileSearchUI {
                     }
                 }
             });
-            searchPane.add(browseBtn, gbc);
+            
+            //Disable the edit property on dirPathText field
+            dirPathText.setEditable(false);
+            
+            //check recursiveCheckBox by default
+            recursiveCheckBox.setSelected(true);
+            
+            layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(LEADING)
+                    .addComponent(findLabel)
+                    .addComponent(dirLabel))
+                .addGroup(layout.createParallelGroup(LEADING)
+                    .addComponent(findText)
+                    .addComponent(dirPathText)
+                    .addComponent(recursiveCheckBox))
+                .addGroup(layout.createParallelGroup(LEADING)
+                    .addComponent(searchBtn)
+                    .addComponent(browseBtn))
+            );
+            
+            layout.linkSize(SwingConstants.HORIZONTAL, searchBtn, browseBtn);
+
+            layout.setVerticalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(BASELINE)
+                    .addComponent(findLabel)
+                    .addComponent(findText)
+                    .addComponent(searchBtn))
+                .addGroup(layout.createParallelGroup(BASELINE)
+                    .addComponent(dirLabel)
+                    .addComponent(dirPathText)
+                    .addComponent(browseBtn))
+                .addComponent(recursiveCheckBox)
+            );
             
             add(searchPane, BorderLayout.NORTH);
-
+            
             model = new DefaultListModel<>();
             
             final JList list = new JList(model);
@@ -198,8 +190,20 @@ public class FileSearchUI {
                         }
                     });
             
-            add(new JScrollPane(list), BorderLayout.WEST);
-            add(new JScrollPane(fileContent), BorderLayout.CENTER);
+            JScrollPane resultPane = new JScrollPane(list);
+            //TitledBorder for resultPane
+            TitledBorder resultPaneTitle = BorderFactory.createTitledBorder(BorderFactory.createTitledBorder("Results"));
+            resultPane.setBorder(resultPaneTitle);
+            
+            add(resultPane, BorderLayout.WEST);
+            
+            
+            JScrollPane contentPane = new JScrollPane(fileContent);
+            //TitledBorder for ContentPane 
+            TitledBorder contentPaneTitle = BorderFactory.createTitledBorder(BorderFactory.createTitledBorder("File Content"));
+            contentPane.setBorder(contentPaneTitle);
+            
+            add(contentPane, BorderLayout.CENTER);
             QueryBtnHandler queryHandler = new QueryBtnHandler();
 
             searchBtn.addActionListener(queryHandler);
