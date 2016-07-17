@@ -18,6 +18,7 @@ import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -133,7 +134,8 @@ public class FileSearchUI {
             gbc.weightx = 1;            
             dirPathText = new JTextField(20);
             dirPathText.setEditable(false);
-            dirPathText.setText("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir");
+            //TODO: for testing purposes only, remove
+            dirPathText.setText("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir\\");
             searchPane.add(dirPathText, gbc);
             
             //reset the vertical position
@@ -166,7 +168,7 @@ public class FileSearchUI {
 
                     int rVal = fileChooser.showOpenDialog(null);
                     if (rVal == JFileChooser.APPROVE_OPTION) {
-                        dirPathText.setText(fileChooser.getSelectedFile().toString());
+                        dirPathText.setText(fileChooser.getSelectedFile().toString() + File.separator);
                     }
                 }
             });
