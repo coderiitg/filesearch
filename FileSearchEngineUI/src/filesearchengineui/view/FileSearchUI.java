@@ -92,8 +92,9 @@ public class FileSearchUI {
         private JButton searchBtn;
         private JButton browseBtn;
         private DefaultListModel model;
-        final JTextArea fileContent = new JTextArea(5, 40);
-
+        private final JTextArea fileContent = new JTextArea(5, 40);
+        private IndexBuilder indexBuilder = new IndexBuilder();
+        
         public TestPane() {
             setLayout(new BorderLayout());
             JPanel searchPane = new JPanel(new GridBagLayout());
@@ -132,6 +133,7 @@ public class FileSearchUI {
             gbc.weightx = 1;            
             dirPathText = new JTextField(20);
             dirPathText.setEditable(false);
+            dirPathText.setText("C:\\Users\\gunsrini.ORADEV\\Desktop\\TexFilesDir");
             searchPane.add(dirPathText, gbc);
             
             //reset the vertical position
@@ -195,7 +197,7 @@ public class FileSearchUI {
                     });
             
             add(new JScrollPane(list), BorderLayout.WEST);
-            add(fileContent, BorderLayout.CENTER);
+            add(new JScrollPane(fileContent), BorderLayout.CENTER);
             QueryBtnHandler queryHandler = new QueryBtnHandler();
 
             searchBtn.addActionListener(queryHandler);
@@ -217,8 +219,7 @@ public class FileSearchUI {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                model.removeAllElements();
-
+                
                 String searchText = findText.getText();
                 String dirPath = dirPathText.getText();
 
@@ -230,7 +231,8 @@ public class FileSearchUI {
                     displayError("Directory field cannot be empty!");
                     return;
                 }
-                IndexBuilder indexBuilder = new IndexBuilder();
+                //Remove earlier elements if any
+                model.removeAllElements();
                 CorpusType corpusInfo = null;
                 
                 //Get the corpus info
@@ -247,14 +249,14 @@ public class FileSearchUI {
                 //Query with search text and get the score for each document
                 Map<Integer, Float> docScoreMap = mainProc.searchQuery(searchText);
                 
-                //Sort and fetch top few results
-                Map<Integer, Float> sortedDocScoreMap = CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/);
-                
-                if(sortedDocScoreMap == null || sortedDocScoreMap.isEmpty()){
+                if(docScoreMap == null || docScoreMap.isEmpty()){
                     //Display one element indicating that no results could be found
                     model.addElement(new DocumentWrapper(null));
                 }
                 else{
+                    
+                    //Sort and fetch top few results
+                    Map<Integer, Float> sortedDocScoreMap = CommonUtils.sortByValue(docScoreMap, 10/*fetch top results*/);
                     //add the search results iteratively
                     addListToModel(sortedDocScoreMap.keySet(), corpusInfo.getDocIdInfoMap());
                 }

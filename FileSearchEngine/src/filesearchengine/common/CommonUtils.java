@@ -41,6 +41,7 @@ public class CommonUtils {
      * @param word
      * @return
      */
+    /*
     public static Object getNormalizedTokens(String word){
         if(word != null){
             //connvert the word to upper case
@@ -67,7 +68,7 @@ public class CommonUtils {
         }
         return null;
     }
-    
+    */
     /**
      *
      * @param values

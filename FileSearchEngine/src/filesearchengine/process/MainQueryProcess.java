@@ -3,6 +3,7 @@ package filesearchengine.process;
 import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.DocInfo;
+import filesearchengine.common.TokenNormalizer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,26 +40,19 @@ public class MainQueryProcess {
         
     /**
      *Get the Weight vector corresponding to the query
-     * @param queryTerms - query terms as an array
+     * @param queryTerms - query
      * @param normalizedTokens - result will be returned in this parameter as set of normalized tokens
      * @return
      */
-    public Map<String, Float> getQueryWeightVector(String[] queryTerms, Set<String> normalizedTokens){
+    public Map<String, Float> getQueryWeightVector(String query, Set<String> normalizedTokens){
         
         //weightVector has to be sorted based on Term value
         Map<String, Float> queryWeightVector = new HashMap<String, Float>();
         
-        //tokenize each term in the query and store in strippedTokens
+        //tokenize the query and store in normalized Tokens
         
-        for(String queryTerm : queryTerms){
-            Object tokens = CommonUtils.getNormalizedTokens(queryTerm);
-            if(tokens != null){
-                if(tokens instanceof String){
-                    queryTerm = (String)tokens;
-                    normalizedTokens.add(queryTerm);
-                }
-            }
-        }
+        List<String> tokens = TokenNormalizer.getNormalizedTokens(query);
+        normalizedTokens.addAll(tokens);
         
         //Construct the query vector
         for (String term : normalizedTokens) {
@@ -133,11 +127,12 @@ public class MainQueryProcess {
     
     public Map<Integer, Float> searchQuery(String query){
         //Get the weight vector corresponding to the query
-        queryWeightVector = getQueryWeightVector(query.split("\\s+"), this.queryTerms);
+        queryWeightVector = getQueryWeightVector(query, this.queryTerms);
         
         if(queryWeightVector == null || queryWeightVector.isEmpty()){
             //Query is not present anywhere in the corpus
             System.out.println("Query is not present anywhere in the corpus");
+            return null;
         }
         
         //TODO: change this based on configuration
