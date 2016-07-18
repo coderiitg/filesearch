@@ -1,7 +1,5 @@
 package filesearchengine.common;
 
-import java.io.File;
-
 import java.math.BigDecimal;
 
 import java.util.Collection;
@@ -12,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 
 
@@ -178,6 +177,7 @@ public class CommonUtils {
      * @param recursiveSearch
      * @return
      */
+    /*
     public static Map<String, Integer> fetchFileDocIdSubMap(SortedMap<String, Integer> fileDocIdMap, String dirPath,
                                                             boolean recursiveSearch) {
         //Returns the submap which contains information about all the files and sub directories
@@ -185,15 +185,15 @@ public class CommonUtils {
 
         if (!recursiveSearch) {
             if (fileDocIdSubMap != null && !fileDocIdSubMap.isEmpty()) {
-                /*we are only concerned with files in current directory in recursive mode
-                 * hence filtering further
-                */
+                //we are only concerned with files in current directory in recursive mode
+                // hence filtering further
+                
                 int dirLastIndex = dirPath.lastIndexOf(File.separator);
                 String prefixEnd = null;
                 for (String filePath : fileDocIdSubMap.keySet()) {
-                    /*The Index of last file separator char in filePath is not same
-                     * as the one for dirPath indicates that we are in sub directory
-                    */
+                    //The Index of last file separator char in filePath is not same
+                    //as the one for dirPath indicates that we are in sub directory
+                    
                     if (filePath.lastIndexOf(File.separator) != dirLastIndex) {
                         prefixEnd = filePath;
                         //No need to proceed further as we are in sub directory now
@@ -209,20 +209,21 @@ public class CommonUtils {
         }
         return fileDocIdSubMap;
     }
+    */
     
     /**
-     * Extracts docIdInfoSubMap corresponding to fileDocIdSubMap and returns it
+     * Extracts docIdInfoSubMap corresponding to docIds
      * @param allDocInfoMap
-     * @param fileDocIdSubMap
+     * @param docIds - set of DocIds whose key value pairs have to be returned
      * @return
      */
     public static Map<Integer, DocInfo> fetchDocIdInfoSubMap(Map<Integer, DocInfo> allDocInfoMap,
-                                                        Map<String, Integer> fileDocIdSubMap) {
+                                                        Set<Integer> docIds) {
+        //A shallo copy of subMap of allDocInfoMap that contains information related to docIds alone
         Map<Integer, DocInfo> docIdInfoSubMap = new HashMap<Integer, DocInfo>();
-        if (fileDocIdSubMap != null) {
-            for (String filePath : fileDocIdSubMap.keySet()) {
-                //Get the docId corresponding to filePath
-                int docId = fileDocIdSubMap.get(filePath);
+        if (docIds != null) {
+            for (int docId : docIds) {
+                //Put the docId and DocInfo in the new map
                 docIdInfoSubMap.put(docId, allDocInfoMap.get(docId));
             }
         }

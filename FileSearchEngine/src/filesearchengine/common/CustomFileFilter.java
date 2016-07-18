@@ -17,7 +17,7 @@ public class CustomFileFilter implements FileFilter {
     }
     
     private static final Set<String> acceptedTypes =
-        new HashSet<String>(Arrays.asList(".txt", ".csv", ".xml", ".rtf", ".doc"));
+        new HashSet<String>(Arrays.asList(".txt", ".csv", ".xml", ".rtf", ".doc", ".dat"));
     
     @Override
     public boolean accept(File file) {

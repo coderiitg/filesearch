@@ -10,6 +10,7 @@ import filesearchengine.process.MainQueryProcess;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /*
@@ -37,7 +38,7 @@ public class CMDQueryProcess {
         CorpusType corpusInfo = null;
         
         try {
-            corpusInfo = obj.getCorpusInfo(args[0], true);
+            corpusInfo = obj.getCorpusInfo(args[0], new HashMap<String, Object>());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {

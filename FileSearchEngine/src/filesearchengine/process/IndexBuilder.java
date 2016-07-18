@@ -4,6 +4,8 @@ import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
+import static filesearchengine.common.SearchEngineConstants.RECURSIVESEARCH;
+import static filesearchengine.common.SearchEngineConstants.SKIPHIDDENITEMS;
 import filesearchengine.common.TokenNormalizer;
 
 import java.io.BufferedReader;
@@ -17,9 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 
 public class IndexBuilder {
@@ -101,7 +101,7 @@ public class IndexBuilder {
      *
      * @param file
      */
-    private void readFile(File file) throws FileNotFoundException, IOException {
+    private int readFile(File file) throws FileNotFoundException, IOException {
         BufferedReader is = null;
 
         try {
@@ -135,6 +135,7 @@ public class IndexBuilder {
             //Get the last modified date of file
             Long lastModifiedDate = file.lastModified();
             docInfo.setLastModifiedDate(lastModifiedDate);
+            return docId;
         } finally {
             if (is != null) {
                 try {
@@ -195,6 +196,7 @@ public class IndexBuilder {
      * @param retainFiles
      * @param recursiveSearch
      */
+    /* TODO:// change implementation
     private void cleanupDelFilesInDir(String dirPath, Set<String> retainFiles,
                                      boolean recursiveSearch) {
         //Get the submap of the all the files indexed under dirPath
@@ -215,7 +217,8 @@ public class IndexBuilder {
             }
         }
     }
-
+    */
+    
     private void constructIDFVector() {
         if (termDocCountMap != null && !termDocCountMap.isEmpty()) {
             int totalDocs = docIdInfoMap.keySet().size();
@@ -235,44 +238,51 @@ public class IndexBuilder {
      * @throws FileNotFoundException
      * @throws IOException
      */
-    private void reBuildIndex(String rootDirFullPath, boolean recursiveSearch) throws FileNotFoundException, IOException {
+    private Set<Integer> reBuildIndex(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException, IOException {
         File rootDir = new File(rootDirFullPath);
-        //Stores the list of files that will be indexed
-        Set<String> curIndexedFiles = reBuildIndex(rootDir, recursiveSearch);
-
+        //Stores the list of files to be searched
+        Set<Integer> curIndexedFiles = reBuildIndex(rootDir, searchParams);
+        
+        /*TODO:// decide when to cleanup deleted files
         //Cleanup deleted files if any
         cleanupDelFilesInDir(rootDirFullPath, curIndexedFiles, recursiveSearch);
-
+        */
+        
         //Re-construct IDF vector
         constructIDFVector();
+        return curIndexedFiles;
     }
 
     /**
      *
      * @param rootDir
-     * @param recurse should rootDir be recursively read
-     * @return list of files that are indexed
+     * @param searchParams search parameters
+     * @return set of docids of files that are indexed
      * @throws FileNotFoundException
      * @throws IOException
      */
-    private Set<String> reBuildIndex(File rootDir, boolean recurse) throws FileNotFoundException, IOException {
+    private Set<Integer> reBuildIndex(File rootDir, Map<String, Object> searchParams) throws FileNotFoundException, IOException {
+        //should recursive search be performed
+        boolean recurse = (Boolean)searchParams.get(RECURSIVESEARCH);
+        boolean skipHidden = (Boolean)searchParams.get(SKIPHIDDENITEMS);
         //Fetch only the supported files
         File[] listFiles = rootDir.listFiles(new CustomFileFilter());
-
-        Set<String> curIndexedFiles = new HashSet<String>();
-
+        
+        Set<Integer> curIndexedFiles = new HashSet<Integer>();
         if (listFiles != null) {
             for (File childFile : listFiles) {
+                //skip processing if skiphidden files is set and childFile is hidden
+                if(skipHidden && childFile.isHidden()){
+                    continue;
+                }
                 if (!childFile.isDirectory()) {
                     //This is not a directory
                     String filePath = childFile.getCanonicalPath();
 
-                    //Add it to the list of files indexed
-                    curIndexedFiles.add(filePath);
+                    //Get the docId corresponding to the filePath
+                    Integer docId = fileDocIdMap.get(filePath);
 
-                    if (fileDocIdMap.containsKey(filePath)) { //this file was already indexed
-                        //Get the docId corresponding to the filePath
-                        int docId = fileDocIdMap.get(filePath);
+                    if (docId != null) { //this file was already indexed
                         //Get the docInfo
                         DocInfo docInfo = docIdInfoMap.get(docId);
                         //Get the last modification date of child file
@@ -281,15 +291,19 @@ public class IndexBuilder {
                         long indexLastModifiedDate = docInfo.getLastModifiedDate();
                         //If it is same as the one in current index, no need to index again
                         if (lastModifiedDate == indexLastModifiedDate) {
+                            //add to the list of processed files
+                            curIndexedFiles.add(docId);
                             //No change in file skipping
                             continue;
                         }
                         //else we need to remove this file from index first
                         remFileFromIndex(filePath);
                     }
-                    readFile(childFile);
+                    docId = readFile(childFile);
+                    //add to the list of processed files
+                    curIndexedFiles.add(docId);
                 } else if (recurse) { //recurse further
-                    Set<String> childIndexedFiles = reBuildIndex(childFile, recurse);
+                    Set<Integer> childIndexedFiles = reBuildIndex(childFile, searchParams);
                     //Add the list of files indexed in child
                     curIndexedFiles.addAll(childIndexedFiles);
                 }
@@ -318,14 +332,15 @@ public class IndexBuilder {
     /**
      *
      * @param rootDirFullPath
-     * @param recursiveSearch
+     * @param searchParams
+     * @return
      * @throws FileNotFoundException
      * @throws IOException
      */
-    private void fetchIndexFromStorage(String rootDirFullPath, boolean recursiveSearch) throws FileNotFoundException, IOException {
+    private Set<Integer> fetchIndexFromStorage(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException, IOException {
         //TODO: First check whether the index is present in storage
         //need not build the index always
-        reBuildIndex(rootDirFullPath, recursiveSearch);
+        return reBuildIndex(rootDirFullPath, searchParams);
     }
 
 
@@ -333,24 +348,20 @@ public class IndexBuilder {
     /**
      *Re-constructs the index and returns the Corpus information pertaining to rootDirFullPath
      * @param rootDirFullPath
-     * @param recursiveSearch - should recursive search be performed
+     * @param searchParams - various search parameters as a map
      * @return
      * @throws FileNotFoundException
      * @throws IOException
      */
-    public CorpusType getCorpusInfo(String rootDirFullPath, boolean recursiveSearch) throws FileNotFoundException,
+    public CorpusType getCorpusInfo(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException,
                                                                    IOException {
-        //Re-populate all the index related fields
-        fetchIndexFromStorage(rootDirFullPath, recursiveSearch);
-        //Get the submap corresponding to the rootDirFullPath
-        Map<String, Integer> fileDocIdSubMap =
-            CommonUtils.fetchFileDocIdSubMap((SortedMap<String, Integer>) fileDocIdMap, rootDirFullPath, recursiveSearch);
+        //indexedFiles containts the DocIds if documenrs that have to be searched
+        Set<Integer> docIdsToSearch = fetchIndexFromStorage(rootDirFullPath, searchParams);
 
-        //get the docIdInfoSubMap corresponding to fileDocIdSubMap
-        Map<Integer, DocInfo> docIdInfoSubMap = CommonUtils.fetchDocIdInfoSubMap(docIdInfoMap, fileDocIdSubMap);
+        //get the docIdInfoSubMap corresponding to indexedFiles
+        Map<Integer, DocInfo> docIdInfoSubMap = CommonUtils.fetchDocIdInfoSubMap(docIdInfoMap, docIdsToSearch);
 
-        CorpusType corpusInfo =
-            new CorpusType(fileDocIdSubMap, docIdInfoSubMap, invertedIndex, termDocCountMap, idfVector);
+        CorpusType corpusInfo = new CorpusType(docIdInfoSubMap, invertedIndex, termDocCountMap, idfVector);
         return corpusInfo;
     }
 }
