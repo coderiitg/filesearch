@@ -25,12 +25,20 @@ public class DocumentWrapper {
             reader = new BufferedReader(new FileReader(new File(filePath)));
             int charsRead = -1;
             int i = 0;
+            
+            
             while((charsRead = reader.read(buffer)) > -1){
                 //Iterate only 4 times i.e read 4*1024 characters
                 if(i > 4)
                     break;
                 sb.append(buffer, 0, charsRead);
                 i++;
+            }
+            
+            //If there is still some content to be read, append ...........
+            if(sb.length() >= 4096){
+                sb.append("\n.....................................................................");
+                sb.append("\n.....................................................................");
             }
         }
         finally{
@@ -48,8 +56,8 @@ public class DocumentWrapper {
 
     public DocumentWrapper(String filePath) {
         if (filePath == null) {
-            filePath = "No results found for the query!!";
-            data = "No results found for the query!!";
+            this.filePath = "No results found for the query!!";
+            this.data = "No results found for the query!!";
             return;
         }
         this.filePath = filePath;
@@ -58,7 +66,6 @@ public class DocumentWrapper {
     public String getData() {
         //Read the file if data is not already set
         if(data == null){
-            System.out.println("Reading afresh....");
             try {
                 data = readFile(filePath);
             } catch (FileNotFoundException e) {

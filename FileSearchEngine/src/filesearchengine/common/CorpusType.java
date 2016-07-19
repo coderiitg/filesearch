@@ -4,12 +4,6 @@ import java.util.Map;
 
 
 public class CorpusType {
-
-    /*
-     * Key - Full file path of a Document
-     * Value - Index associated with it
-     */
-    Map<String, Integer> fileDocIdMap = null;
     
     /*
      * Key - Index associated with it
@@ -46,18 +40,14 @@ public class CorpusType {
         return totalDocs;        
     }
 
-    public CorpusType(Map<String, Integer> fileDocIdMap, Map<Integer, DocInfo> docIdInfoMap,
+    public CorpusType(Map<Integer, DocInfo> docIdInfoMap,
                       Map<String, Map<Integer, Integer>> invertedIndex, Map<String, Integer> termDocCountMap, Map<String, Float> idfVector) {
-        this.fileDocIdMap = fileDocIdMap;
         this.docIdInfoMap = docIdInfoMap;
         this.invertedIndex = invertedIndex;
         this.termDocCountMap = termDocCountMap;  
         this.idfVector = idfVector;
     }
     
-    public Map<String, Integer> getFileDocIdMap() {
-        return fileDocIdMap;
-    }
     
     public Map<Integer, DocInfo> getDocIdInfoMap() {
         return docIdInfoMap;

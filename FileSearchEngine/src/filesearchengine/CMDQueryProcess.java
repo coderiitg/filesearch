@@ -10,6 +10,7 @@ import filesearchengine.process.MainQueryProcess;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /*
@@ -37,7 +38,7 @@ public class CMDQueryProcess {
         CorpusType corpusInfo = null;
         
         try {
-            corpusInfo = obj.getCorpusInfo(args[0]);
+            corpusInfo = obj.getCorpusInfo(args[0], new HashMap<String, Object>());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -48,7 +49,7 @@ public class CMDQueryProcess {
         MainQueryProcess mainProc = new MainQueryProcess(corpusInfo);
         
         //Query with search terms
-        Map<Integer, Float> docScoreMap = mainProc.searchQuery(args[1]);
+        Map<Integer, Float> docScoreMap = mainProc.triggerQuery(args[1]);
         //Display result in order of relevance
         CMDQueryProcess.displayResult(CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/), corpusInfo.getDocIdInfoMap());
     }
