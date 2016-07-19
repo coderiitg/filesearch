@@ -2,7 +2,9 @@ package filesearchengineui.view;
 
 import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
+import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
+import static filesearchengine.common.SearchEngineConstants.EXTNSSEARCH;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVESEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIPHIDDENITEMS;
 
@@ -13,6 +15,7 @@ import filesearchengineui.model.DocumentWrapper;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -23,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,6 +38,7 @@ import static javax.swing.GroupLayout.Alignment.BASELINE;
 import static javax.swing.GroupLayout.Alignment.LEADING;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -43,6 +48,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
@@ -72,7 +78,7 @@ public class FileSearchUI {
                 frame.setLocation(100, 100);
                 frame.setSize(1200, 700);
                 frame.setLayout(new BorderLayout());
-                frame.add(new TestPane());
+                frame.add(new MainSearchPane());
                 //frame.pack();
                 //frame.setLocationRelativeTo(null);
                 frame.setVisible(true);
@@ -92,11 +98,51 @@ public class FileSearchUI {
         }
     }
 
+    class ExtnWrapperRenderer implements ListCellRenderer
+    {
+        JCheckBox checkBox;
+      
+        public ExtnWrapperRenderer()
+        {
+            checkBox = new JCheckBox();
 
-    public class TestPane extends JPanel {
+        }
+        public Component getListCellRendererComponent(JList list,
+                                                      Object value,
+                                                      int index,
+                                                      boolean isSelected,
+                                                      boolean cellHasFocus)
+        {
 
-        JLabel findLabel = new JLabel("Search Text");
-        JLabel dirLabel = new JLabel("Starting Folder");
+            ExtnWrapper extnCheckBox = (ExtnWrapper)value;
+            checkBox.setText(extnCheckBox.extension);
+            checkBox.setSelected(extnCheckBox.chosen);
+            return checkBox;
+        }
+    }
+      
+    class ExtnWrapper
+    {
+        String extension;
+        Boolean chosen;
+      
+        public ExtnWrapper(String extension, Boolean chosen)
+        {
+            this.extension = extension;
+            this.chosen = chosen;
+        }
+
+        public String getExtension() {
+            return extension;
+        }
+
+        public Boolean isChosen() {
+            return chosen;
+        }
+    }
+    
+    public class MainSearchPane extends JPanel {
+
         JTextField findText = new JTextField(20);
         JTextField dirPathText = new JTextField(20);
         JCheckBox recursiveCheckBox = new JCheckBox("Search subfolders");
@@ -108,8 +154,25 @@ public class FileSearchUI {
         private DefaultListModel model;
         private final JTextArea fileContent = new JTextArea(5, 40);
         private IndexBuilder indexBuilder = new IndexBuilder();
+        ExtnWrapper[] extnWrappers;
 
-        public TestPane() {
+        public MainSearchPane() {
+            
+            //Get the set of extensions supported
+            Set<String> suppExtns = CustomFileFilter.allSuppExtns;
+            if(suppExtns == null || suppExtns.isEmpty()){
+                throw new RuntimeException("fatal error, supported extensions list is empty!!");
+            }
+            
+            //Create an array first
+            extnWrappers = new ExtnWrapper[suppExtns.size()];
+            //Construct extnWrappers array
+            int i = 0;
+            for(String extn : suppExtns){
+                extnWrappers[i] = new ExtnWrapper(extn, true);
+                i++;
+            }
+            
             setLayout(new BorderLayout());
             JPanel searchPane = new JPanel();
             GroupLayout layout = new GroupLayout(searchPane);
@@ -146,6 +209,25 @@ public class FileSearchUI {
             //check hidden item check by default
             hiddenFileCheckBox.setSelected(false);
             
+            JLabel findLabel = new JLabel("Search Text");
+            JLabel dirLabel = new JLabel("Starting Folder");
+            JLabel fileTypeLabel = new JLabel("Extensions");
+            
+            //Initialize a combo box with the extension wrappers
+            JComboBox extnCombo = new JComboBox(extnWrappers);
+            
+            extnCombo.setMaximumSize(new Dimension(1,25));
+            //Set the renderer
+            extnCombo.setRenderer(new ExtnWrapperRenderer());
+            extnCombo.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent e) {
+                    JComboBox cb = (JComboBox) e.getSource();
+                    ExtnWrapper extnWrapper = (ExtnWrapper) cb.getSelectedItem();
+                    ExtnWrapperRenderer extnWrapperRenderer = (ExtnWrapperRenderer) cb.getRenderer();
+                    extnWrapperRenderer.checkBox.setSelected(extnWrapper.chosen = !extnWrapper.chosen);
+                }
+            });
+            
             layout.setHorizontalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(findLabel)
@@ -155,7 +237,9 @@ public class FileSearchUI {
                     .addComponent(dirPathText)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(recursiveCheckBox)
-                        .addComponent(hiddenFileCheckBox)))
+                        .addComponent(hiddenFileCheckBox)
+                        .addComponent(fileTypeLabel)
+                        .addComponent(extnCombo)))
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(searchBtn)
                     .addComponent(browseBtn))
@@ -174,7 +258,9 @@ public class FileSearchUI {
                     .addComponent(browseBtn))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(recursiveCheckBox)
-                    .addComponent(hiddenFileCheckBox))
+                    .addComponent(hiddenFileCheckBox)
+                    .addComponent(fileTypeLabel)
+                    .addComponent(extnCombo))
             );
             
             add(searchPane, BorderLayout.NORTH);
@@ -226,7 +312,7 @@ public class FileSearchUI {
         }
 
         private void displayError(String errorMsg) {
-            JOptionPane.showMessageDialog(TestPane.this, errorMsg, "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(MainSearchPane.this, errorMsg, "Error", JOptionPane.ERROR_MESSAGE);
         }
 
         private void addListToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
@@ -235,7 +321,18 @@ public class FileSearchUI {
                 model.addElement(new DocumentWrapper(filePath));
             }
         }
-
+        
+        private Set<String> fetchSelectedExtns(){
+            Set<String> selectedExtns = new HashSet<String>();
+            for(ExtnWrapper extnWrapper : extnWrappers){
+                //If the extension was selected
+                if(extnWrapper.isChosen()){
+                    selectedExtns.add(extnWrapper.getExtension());
+                }
+            }
+            return selectedExtns;
+        }
+        
         public class QueryBtnHandler implements ActionListener {
 
             @Override
@@ -252,6 +349,16 @@ public class FileSearchUI {
                     displayError("Directory field cannot be empty!");
                     return;
                 }
+                
+                //Get the selected extension list
+                Set<String> selectedExtns = fetchSelectedExtns();
+                //throw an error if atleast one extension is not selected
+                
+                if(selectedExtns.isEmpty()){
+                    displayError("You must select atleast one extension");
+                    return;
+                }
+                
                 //Remove earlier elements if any
                 model.removeAllElements();
 
@@ -264,12 +371,17 @@ public class FileSearchUI {
                     boolean recursiveSearch = recursiveCheckBox.isSelected();
                     //should hidden items be skipped
                     boolean skipHiddenItems = hiddenFileCheckBox.isSelected();
+                          
                     
                     //Build the search parameter map
                     Map<String, Object> searchParams = new HashMap<String, Object>();
                     searchParams.put(RECURSIVESEARCH, recursiveSearch);
                     searchParams.put(SKIPHIDDENITEMS, skipHiddenItems);
+                    searchParams.put(EXTNSSEARCH, selectedExtns);
+                    
+                    //Get the dirPath sepcific Corpus Info
                     projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, searchParams);
+                
                 } catch (FileNotFoundException ex) {
                     displayError(ex.getMessage());
                 } catch (IOException ex) {

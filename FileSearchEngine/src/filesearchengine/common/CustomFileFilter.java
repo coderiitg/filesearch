@@ -12,12 +12,18 @@ import java.util.Set;
 
 
 public class CustomFileFilter implements FileFilter {
-    public CustomFileFilter() {
-        super();
-    }
     
-    private static final Set<String> acceptedTypes =
-        new HashSet<String>(Arrays.asList(".txt", ".csv", ".xml", ".rtf", ".doc", ".dat"));
+    //All the extensions supported by the file search engine
+    public static final Set<String> allSuppExtns =
+        new HashSet<String>(Arrays.asList("txt", "csv", "xml", "rtf", "doc", "dat"));
+    
+    //The set of extensions selected by the user when submitting search
+    private Set<String> selectedExtns = null;
+    
+    public CustomFileFilter(Set<String> selectedExtns) {
+        //set the selectedExtns field
+        this.selectedExtns = selectedExtns;
+    }
     
     @Override
     public boolean accept(File file) {
@@ -31,9 +37,9 @@ public class CustomFileFilter implements FileFilter {
         int beginIndexExtn = fileName.lastIndexOf('.');
         
         if(beginIndexExtn > 0){
-            String extension = (fileName.substring(beginIndexExtn)).toLowerCase();
-            //check if extension is present in acceptedTypes
-            if(acceptedTypes.contains(extension)){
+            String extension = (fileName.substring(beginIndexExtn + 1)).toLowerCase();
+            //check if extension is present in selectedExtns by the user
+            if(selectedExtns.contains(extension)){
                 return true;
             }
         }

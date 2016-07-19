@@ -4,6 +4,7 @@ import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
+import static filesearchengine.common.SearchEngineConstants.EXTNSSEARCH;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVESEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIPHIDDENITEMS;
 import filesearchengine.common.TokenNormalizer;
@@ -265,8 +266,9 @@ public class IndexBuilder {
         //should recursive search be performed
         boolean recurse = (Boolean)searchParams.get(RECURSIVESEARCH);
         boolean skipHidden = (Boolean)searchParams.get(SKIPHIDDENITEMS);
-        //Fetch only the supported files
-        File[] listFiles = rootDir.listFiles(new CustomFileFilter());
+        Set<String> selectedExtns = (Set<String>)searchParams.get(EXTNSSEARCH);
+        //Fetch only the files with selected Extns
+        File[] listFiles = rootDir.listFiles(new CustomFileFilter(selectedExtns));
         
         Set<Integer> curIndexedFiles = new HashSet<Integer>();
         if (listFiles != null) {
