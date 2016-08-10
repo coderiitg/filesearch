@@ -4,9 +4,10 @@ import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
-import static filesearchengine.common.SearchEngineConstants.EXTNSSEARCH;
-import static filesearchengine.common.SearchEngineConstants.RECURSIVESEARCH;
-import static filesearchengine.common.SearchEngineConstants.SKIPHIDDENITEMS;
+import static filesearchengine.common.SearchEngineConstants.EXTNS_SEARCH;
+import static filesearchengine.common.SearchEngineConstants.FILENAME_PATTERN;
+import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
+import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
 import filesearchengine.common.TokenNormalizer;
 
 import java.io.BufferedReader;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 
 public class IndexBuilder {
@@ -231,88 +233,111 @@ public class IndexBuilder {
         }
     }
 
-
-    /**
-     *
-     * @param rootDirFullPath
-     * @param recursiveSearch
-     * @throws FileNotFoundException
-     * @throws IOException
-     */
-    private Set<Integer> reBuildIndex(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException, IOException {
-        File rootDir = new File(rootDirFullPath);
-        //Stores the list of files to be searched
-        Set<Integer> curIndexedFiles = reBuildIndex(rootDir, searchParams);
+    private class ReBuildIndex{
+        private boolean recurse = false;
+        private boolean skipHidden = true;
+        private Set<String> selectedExtns = CustomFileFilter.allSuppExtns;
         
-        /*TODO:// decide when to cleanup deleted files
-        //Cleanup deleted files if any
-        cleanupDelFilesInDir(rootDirFullPath, curIndexedFiles, recursiveSearch);
-        */
+        //File Name pattern if any
+        private String fileNamePattern = null;
         
-        //Re-construct IDF vector
-        constructIDFVector();
-        return curIndexedFiles;
-    }
-
-    /**
-     *
-     * @param rootDir
-     * @param searchParams search parameters
-     * @return set of docids of files that are indexed
-     * @throws FileNotFoundException
-     * @throws IOException
-     */
-    private Set<Integer> reBuildIndex(File rootDir, Map<String, Object> searchParams) throws FileNotFoundException, IOException {
-        //should recursive search be performed
-        boolean recurse = (Boolean)searchParams.get(RECURSIVESEARCH);
-        boolean skipHidden = (Boolean)searchParams.get(SKIPHIDDENITEMS);
-        Set<String> selectedExtns = (Set<String>)searchParams.get(EXTNSSEARCH);
-        //Fetch only the files with selected Extns
-        File[] listFiles = rootDir.listFiles(new CustomFileFilter(selectedExtns));
+        //Stores the list of files indexed in this re-build index process
+        private Set<Integer> curIndexedFiles = new HashSet<Integer>();
         
-        Set<Integer> curIndexedFiles = new HashSet<Integer>();
-        if (listFiles != null) {
-            for (File childFile : listFiles) {
-                //skip processing if skiphidden files is set and childFile is hidden
-                if(skipHidden && childFile.isHidden()){
-                    continue;
-                }
-                if (!childFile.isDirectory()) {
-                    //This is not a directory
-                    String filePath = childFile.getCanonicalPath();
+        //indicates whether only file name search is requested by the user
+        private boolean fileNameSearchOnly = false;
+        
+        private ReBuildIndex(Map<String, Object> searchParams){
+            //should recursive search be performed
+            this.recurse = (Boolean)searchParams.get(RECURSIVE_SEARCH);
+            this.skipHidden = (Boolean)searchParams.get(SKIP_HIDDEN_ITEMS);
+            this.selectedExtns = (Set<String>)searchParams.get(EXTNS_SEARCH);
+            //If the fileName parameter is not provided, this will be NULL
+            this.fileNamePattern = (String)searchParams.get(FILENAME_PATTERN);
+        }
+        
+        /**
+         *
+         * @param rootDirFullPath
+         * @return
+         * @throws FileNotFoundException
+         * @throws IOException
+         */
+        private Set<Integer> reBuild(String rootDirFullPath) throws FileNotFoundException, IOException {
+            File rootDir = new File(rootDirFullPath);
+            //call the re-build process starting from rootDir
+            reBuild(rootDir);
+            
+            /*TODO:// decide when to cleanup deleted files
+            //Cleanup deleted files if any
+            cleanupDelFilesInDir(rootDirFullPath, curIndexedFiles, recursiveSearch);
+            */
+            
+            //Re-construct IDF vector
+            constructIDFVector();
+            
+            return curIndexedFiles;
+        }
 
-                    //Get the docId corresponding to the filePath
-                    Integer docId = fileDocIdMap.get(filePath);
+        /**
+         *
+         * @param rootDir
+         * @throws FileNotFoundException
+         * @throws IOException
+         */
+        private void reBuild(File rootDir) throws FileNotFoundException, IOException {
+            //Fetch only the files with selected Extns
+            File[] listFiles = rootDir.listFiles(new CustomFileFilter(selectedExtns));
 
-                    if (docId != null) { //this file was already indexed
-                        //Get the docInfo
-                        DocInfo docInfo = docIdInfoMap.get(docId);
-                        //Get the last modification date of child file
-                        long lastModifiedDate = childFile.lastModified();
-                        //Get the last modification date when childFile was indexed
-                        long indexLastModifiedDate = docInfo.getLastModifiedDate();
-                        //If it is same as the one in current index, no need to index again
-                        if (lastModifiedDate == indexLastModifiedDate) {
-                            //add to the list of processed files
-                            curIndexedFiles.add(docId);
-                            //No change in file skipping
-                            continue;
-                        }
-                        //else we need to remove this file from index first
-                        remFileFromIndex(filePath);
+            if (listFiles != null) {
+                for (File childFile : listFiles) {
+                    //skip processing if skiphidden files is set and childFile is hidden
+                    if (skipHidden && childFile.isHidden()) {
+                        continue;
                     }
-                    docId = readFile(childFile);
-                    //add to the list of processed files
-                    curIndexedFiles.add(docId);
-                } else if (recurse) { //recurse further
-                    Set<Integer> childIndexedFiles = reBuildIndex(childFile, searchParams);
-                    //Add the list of files indexed in child
-                    curIndexedFiles.addAll(childIndexedFiles);
+                    if (!childFile.isDirectory()) {
+                        //This is not a directory
+                        String filePath = childFile.getCanonicalPath();
+                        //check if file name also has to be matched
+                        if (fileNamePattern != null) {
+                            String baseFileName = CommonUtils.getBaseFileName(filePath);
+                            //Ignore if the current file doesn't match the pattern
+                            if (!Pattern.compile(Pattern.quote(fileNamePattern),
+                                                 Pattern.CASE_INSENSITIVE).matcher(baseFileName).find()) {
+                                continue;
+                            }
+                        }
+                        //Get the docId corresponding to the filePath
+                        Integer docId = fileDocIdMap.get(filePath);
+
+                        if (docId != null) { //this file was already indexed
+                            //Get the docInfo
+                            DocInfo docInfo = docIdInfoMap.get(docId);
+                            //Get the last modification date of child file
+                            long lastModifiedDate = childFile.lastModified();
+                            //Get the last modification date when childFile was indexed
+                            long indexLastModifiedDate = docInfo.getLastModifiedDate();
+                            //If it is same as the one in current index, no need to index again
+                            if (lastModifiedDate == indexLastModifiedDate) {
+                                //add to the list of processed files
+                                curIndexedFiles.add(docId);
+                                //No change in file skipping
+                                continue;
+                            }
+                            //else we need to remove this file from index first
+                            remFileFromIndex(filePath);
+                        }
+                        docId = readFile(childFile);
+                        //add to the list of processed files
+                        curIndexedFiles.add(docId);
+                    } else if (recurse) { //recurse further
+                        reBuild(childFile);
+                    }
                 }
             }
         }
-        return curIndexedFiles;
     }
+    
 
     public void displayIndex() {
         System.out.println("***********BEGIN Inverted Index CONTENT***********");
@@ -342,7 +367,9 @@ public class IndexBuilder {
     private Set<Integer> fetchIndexFromStorage(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException, IOException {
         //TODO: First check whether the index is present in storage
         //need not build the index always
-        return reBuildIndex(rootDirFullPath, searchParams);
+        ReBuildIndex reBuildProc = new ReBuildIndex(searchParams);
+        //Re-build the index and also return all the file names that are indexed
+        return reBuildProc.reBuild(rootDirFullPath);
     }
 
 
@@ -357,6 +384,8 @@ public class IndexBuilder {
      */
     public CorpusType getCorpusInfo(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException,
                                                                    IOException {
+        //TODO: delete the test code
+        searchParams.put(FILENAME_PATTERN, "Cricket");
         //indexedFiles containts the DocIds if documenrs that have to be searched
         Set<Integer> docIdsToSearch = fetchIndexFromStorage(rootDirFullPath, searchParams);
 

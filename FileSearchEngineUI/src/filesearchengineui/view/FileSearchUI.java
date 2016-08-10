@@ -4,9 +4,9 @@ import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
-import static filesearchengine.common.SearchEngineConstants.EXTNSSEARCH;
-import static filesearchengine.common.SearchEngineConstants.RECURSIVESEARCH;
-import static filesearchengine.common.SearchEngineConstants.SKIPHIDDENITEMS;
+import static filesearchengine.common.SearchEngineConstants.EXTNS_SEARCH;
+import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
+import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
 
 import filesearchengine.process.IndexBuilder;
 import filesearchengine.process.MainQueryProcess;
@@ -145,6 +145,7 @@ public class FileSearchUI {
 
         JTextField findText = new JTextField(20);
         JTextField dirPathText = new JTextField(20);
+        JTextField fileNameText = new JTextField(20);
         JCheckBox recursiveCheckBox = new JCheckBox("Search subfolders");
         JCheckBox hiddenFileCheckBox = new JCheckBox("Skip hidden items");
         JButton searchBtn = new JButton("Search");
@@ -209,12 +210,14 @@ public class FileSearchUI {
             //check hidden item check by default
             hiddenFileCheckBox.setSelected(false);
             
-            JLabel findLabel = new JLabel("Search Text");
-            JLabel dirLabel = new JLabel("Starting Folder");
-            JLabel fileTypeLabel = new JLabel("Extensions");
+            JLabel findLabel = new JLabel("Search Text:");
+            JLabel fileNameLabel = new JLabel("File Name:");
+            JLabel dirLabel = new JLabel("Starting Folder:");
+            JLabel fileTypeLabel = new JLabel("Extensions:");
             
             //Initialize a combo box with the extension wrappers
             JComboBox extnCombo = new JComboBox(extnWrappers);
+            
             
             extnCombo.setMaximumSize(new Dimension(1,25));
             //Set the renderer
@@ -231,36 +234,52 @@ public class FileSearchUI {
             layout.setHorizontalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(findLabel)
-                    .addComponent(dirLabel))
+                    .addComponent(dirLabel)
+                    .addComponent(fileNameLabel))
                 .addGroup(layout.createParallelGroup(LEADING)
-                    .addComponent(findText)
-                    .addComponent(dirPathText)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(recursiveCheckBox)
-                        .addComponent(hiddenFileCheckBox)
-                        .addComponent(fileTypeLabel)
-                        .addComponent(extnCombo)))
+                    .addComponent(findText, 0, 600, Short.MAX_VALUE)
+                    .addComponent(dirPathText, 0, 600, Short.MAX_VALUE)
+                    .addComponent(fileNameText, 0, 600, Short.MAX_VALUE))
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(searchBtn)
                     .addComponent(browseBtn))
+                .addGroup(layout.createParallelGroup(LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(recursiveCheckBox)
+                        .addComponent(hiddenFileCheckBox))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(fileTypeLabel)
+                        .addComponent(extnCombo)))
             );
             
+            //Ensure that text fields stay the same size
+            
+            layout.linkSize(SwingConstants.HORIZONTAL, findText, dirPathText);
+            layout.linkSize(SwingConstants.HORIZONTAL, findText, fileNameText);
+            
+            
+            //Ensure that the buttons stay the same size
             layout.linkSize(SwingConstants.HORIZONTAL, searchBtn, browseBtn);
-
+            
+            
             layout.setVerticalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(findLabel)
-                    .addComponent(findText)
+                    .addComponent(findText, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                     .addComponent(searchBtn))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(dirLabel)
                     .addComponent(dirPathText)
-                    .addComponent(browseBtn))
+                    .addComponent(browseBtn)
+                    .addGroup(layout.createParallelGroup(BASELINE)
+                        .addComponent(recursiveCheckBox)
+                        .addComponent(hiddenFileCheckBox)))
                 .addGroup(layout.createParallelGroup(BASELINE)
-                    .addComponent(recursiveCheckBox)
-                    .addComponent(hiddenFileCheckBox)
-                    .addComponent(fileTypeLabel)
-                    .addComponent(extnCombo))
+                    .addComponent(fileNameLabel)
+                    .addComponent(fileNameText)
+                    .addGroup(layout.createParallelGroup(BASELINE)
+                        .addComponent(fileTypeLabel)
+                        .addComponent(extnCombo)))
             );
             
             add(searchPane, BorderLayout.NORTH);
@@ -293,7 +312,7 @@ public class FileSearchUI {
                                                  new Font("SansSerif", Font.BOLD, 14));
             resultPane.setBorder(resultPaneTitle);
 
-            add(resultPane, BorderLayout.WEST);
+            add(resultPane, BorderLayout.CENTER);
 
 
             JScrollPane contentPane = new JScrollPane(fileContent);
@@ -304,7 +323,7 @@ public class FileSearchUI {
                                                  new Font("SansSerif", Font.BOLD, 14));
             contentPane.setBorder(contentPaneTitle);
 
-            add(contentPane, BorderLayout.CENTER);
+            add(contentPane, BorderLayout.EAST);
             QueryBtnHandler queryHandler = new QueryBtnHandler();
 
             searchBtn.addActionListener(queryHandler);
@@ -375,9 +394,9 @@ public class FileSearchUI {
                     
                     //Build the search parameter map
                     Map<String, Object> searchParams = new HashMap<String, Object>();
-                    searchParams.put(RECURSIVESEARCH, recursiveSearch);
-                    searchParams.put(SKIPHIDDENITEMS, skipHiddenItems);
-                    searchParams.put(EXTNSSEARCH, selectedExtns);
+                    searchParams.put(RECURSIVE_SEARCH, recursiveSearch);
+                    searchParams.put(SKIP_HIDDEN_ITEMS, skipHiddenItems);
+                    searchParams.put(EXTNS_SEARCH, selectedExtns);
                     
                     //Get the dirPath sepcific Corpus Info
                     projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, searchParams);

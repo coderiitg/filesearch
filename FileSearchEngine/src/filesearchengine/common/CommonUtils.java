@@ -1,5 +1,7 @@
 package filesearchengine.common;
 
+import java.io.File;
+
 import java.math.BigDecimal;
 
 import java.util.Collection;
@@ -229,4 +231,34 @@ public class CommonUtils {
         }
         return docIdInfoSubMap;
     }
+    
+    /**
+     *Returns the base file name from fileName
+     * @param fileName
+     * @return
+     */
+    public static String getBaseFileName(String fileName){
+        if(fileName != null && !fileName.isEmpty()){
+            int lastSeperatorPos = fileName.indexOf(File.separatorChar);
+            int lastPeriodPos = fileName.lastIndexOf('.');
+            if(lastSeperatorPos != -1){
+                if(lastPeriodPos != -1){
+                    return fileName.substring(lastSeperatorPos + 1, lastPeriodPos);
+                }
+                else{
+                    return fileName.substring(lastSeperatorPos + 1);
+                }
+            }
+            else{
+                if(lastPeriodPos != -1){
+                    return fileName.substring(0, lastPeriodPos);
+                }
+                else{
+                    return fileName;
+                }
+            }
+        }
+        return fileName;
+    }
+    
 }
