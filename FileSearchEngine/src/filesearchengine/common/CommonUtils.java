@@ -4,9 +4,12 @@ import java.io.File;
 
 import java.math.BigDecimal;
 
+import java.text.SimpleDateFormat;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -234,31 +237,78 @@ public class CommonUtils {
     
     /**
      *Returns the base file name from fileName
-     * @param fileName
+     * @param filePath
      * @return
      */
-    public static String getBaseFileName(String fileName){
-        if(fileName != null && !fileName.isEmpty()){
-            int lastSeperatorPos = fileName.indexOf(File.separatorChar);
-            int lastPeriodPos = fileName.lastIndexOf('.');
+    public static String getBaseFileName(String filePath){
+        if(filePath != null && !filePath.isEmpty()){
+            int lastSeperatorPos = filePath.lastIndexOf(File.separatorChar);
+            int lastPeriodPos = filePath.lastIndexOf('.');
             if(lastSeperatorPos != -1){
                 if(lastPeriodPos != -1){
-                    return fileName.substring(lastSeperatorPos + 1, lastPeriodPos);
+                    return filePath.substring(lastSeperatorPos + 1, lastPeriodPos);
                 }
                 else{
-                    return fileName.substring(lastSeperatorPos + 1);
+                    return filePath.substring(lastSeperatorPos + 1);
                 }
             }
             else{
                 if(lastPeriodPos != -1){
-                    return fileName.substring(0, lastPeriodPos);
+                    return filePath.substring(0, lastPeriodPos);
                 }
                 else{
-                    return fileName;
+                    return filePath;
                 }
             }
         }
-        return fileName;
+        return filePath;
     }
     
+    /**
+     *Get the extension from file path
+     * @param filePath
+     * @return null if filePath is null or empty or doesn't have extension
+     */
+    public static String getFileExtension(String filePath){
+        if(filePath != null && !filePath.isEmpty()){
+            int lastPeriodPos = filePath.lastIndexOf('.');
+            if(lastPeriodPos != -1){
+                return filePath.substring(lastPeriodPos + 1);
+            }
+        }
+        return null;
+    }
+    
+    private static final int KB = 1024; //1 Kilo byte
+    private static final int MB = 1024*KB; //1 Mega byte
+    private static final int GB = 1024*MB; //1 Giga byte
+    
+    /**
+     *Returns the file size in GB/MB/KB
+     * @param fileSize
+     * @return
+     */
+    public static String getFormattedFileSize(long fileSize){
+         if(fileSize /GB != 0){
+             return String.format("%.2f GB", (float)fileSize/GB);
+         }
+         if(fileSize/MB != 0){
+             return String.format("%.2f MB", (float)fileSize/MB);
+         }
+         return String.format("%.2f KB", (float)fileSize/KB);
+    }
+    
+    /**
+     *
+     * @param millis
+     * @param dateFormat
+     * @return
+     */
+    public static String getFormattedDate(long millis, String dateFormat){
+        if(dateFormat == null){
+            dateFormat = "dd/MM/yyyy hh:mm:ss a";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        return sdf.format(new Date(millis));
+    }
 }

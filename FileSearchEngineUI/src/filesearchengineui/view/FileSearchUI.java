@@ -5,6 +5,7 @@ import filesearchengine.common.CorpusType;
 import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
 import static filesearchengine.common.SearchEngineConstants.EXTNS_SEARCH;
+import static filesearchengine.common.SearchEngineConstants.FILENAME_PATTERN;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
 
@@ -31,8 +32,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.DefaultListModel;
 import javax.swing.GroupLayout;
 import static javax.swing.GroupLayout.Alignment.BASELINE;
 import static javax.swing.GroupLayout.Alignment.LEADING;
@@ -46,20 +45,22 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListCellRenderer;
-import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
 
 public class FileSearchUI {
 
     public static void main(String[] args) {
+
         new filesearchengineui.view.FileSearchUI();
     }
 
@@ -68,7 +69,8 @@ public class FileSearchUI {
             @Override
             public void run() {
                 try {
-                    UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
+                    UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+                    //UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
                 } catch (ClassNotFoundException | InstantiationException | IllegalAccessException |
                          UnsupportedLookAndFeelException ex) {
                 }
@@ -86,15 +88,16 @@ public class FileSearchUI {
         });
     }
 
-    public class DocumentWrapperRenderer extends DefaultListCellRenderer {
+    
+    class ResultTableModel extends DefaultTableModel{
+        
+        public ResultTableModel(Object[] header, int rows){
+            super(header, rows);    
+        }
+        
         @Override
-        public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected,
-                                                      boolean hasFocus) {
-            if (value instanceof DocumentWrapper) {
-                return super.getListCellRendererComponent(list, ((DocumentWrapper) value).getFilePath(), index,
-                                                          isSelected, hasFocus);
-            }
-            return super.getListCellRendererComponent(list, value, index, isSelected, hasFocus);
+        public boolean isCellEditable(int row, int column){  
+            return false;  
         }
     }
 
@@ -152,11 +155,11 @@ public class FileSearchUI {
         JButton browseBtn = new JButton("Browse");
         JFileChooser fileChooser = new JFileChooser();
 
-        private DefaultListModel model;
+        private DefaultTableModel resultTableModel;
         private final JTextArea fileContent = new JTextArea(5, 40);
         private IndexBuilder indexBuilder = new IndexBuilder();
         ExtnWrapper[] extnWrappers;
-
+        
         public MainSearchPane() {
             
             //Get the set of extensions supported
@@ -265,7 +268,7 @@ public class FileSearchUI {
             layout.setVerticalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(findLabel)
-                    .addComponent(findText, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addComponent(findText)
                     .addComponent(searchBtn))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(dirLabel)
@@ -284,17 +287,17 @@ public class FileSearchUI {
             
             add(searchPane, BorderLayout.NORTH);
 
-            model = new DefaultListModel<>();
+            resultTableModel = new ResultTableModel(new String[]{"Name", "Path", "Type", "Size", "Modified Date"}, 0);
 
-            final JList list = new JList(model);
-            list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-            list.setCellRenderer(new DocumentWrapperRenderer());
-
-            list.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            final JTable resultTable = new JTable(resultTableModel);
+            resultTable.setAutoCreateRowSorter(true);
+            resultTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
                 @Override
                 public void valueChanged(ListSelectionEvent e) {
                     if (!e.getValueIsAdjusting()) {
-                        DocumentWrapper docWrapper = (DocumentWrapper) list.getSelectedValue();
+                        DocumentWrapper docWrapper = (DocumentWrapper)resultTable.getValueAt(resultTable.getSelectedRow(), 1);
+                        
+                        //Set the file Content in the Content pane
                         if (docWrapper != null) {
                             fileContent.setText(docWrapper.getData());
                         } else {
@@ -304,7 +307,7 @@ public class FileSearchUI {
                 }
             });
 
-            JScrollPane resultPane = new JScrollPane(list);
+            JScrollPane resultPane = new JScrollPane(resultTable);
             //TitledBorder for resultPane
             TitledBorder resultPaneTitle =
                 BorderFactory.createTitledBorder(UIManager.getBorder("ScrollPane.border"), "Results",
@@ -314,7 +317,7 @@ public class FileSearchUI {
 
             add(resultPane, BorderLayout.CENTER);
 
-
+            fileContent.setEditable(false);
             JScrollPane contentPane = new JScrollPane(fileContent);
             //TitledBorder for ContentPane
             TitledBorder contentPaneTitle =
@@ -336,8 +339,18 @@ public class FileSearchUI {
 
         private void addListToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
             for (Integer docId : docIdSet) {
-                String filePath = (docIdFileMap.get(docId)).getFilePath();
-                model.addElement(new DocumentWrapper(filePath));
+                DocInfo docInfo = docIdFileMap.get(docId);
+                //{"Name", "Location", "Type", "Size", "Modified Date"}
+                String filePath = docInfo.getFilePath();
+                DocumentWrapper docWrapper = new DocumentWrapper(filePath);
+                String baseFileName = docInfo.getBaseFileName();
+                String fileType = docInfo.getFileType();
+                long fileSize = docInfo.getFileSize();
+                long lastModifiedDate = docInfo.getLastModifiedDate();
+                resultTableModel.addRow(new Object[] {
+                                        baseFileName, docWrapper, fileType, CommonUtils.getFormattedFileSize(fileSize),
+                                        CommonUtils.getFormattedDate(lastModifiedDate, null)
+                });                
             }
         }
         
@@ -356,16 +369,17 @@ public class FileSearchUI {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-
+               
                 String searchText = findText.getText();
                 String dirPath = dirPathText.getText();
-
+                String fileNamePattern = fileNameText.getText();
+                
                 if (searchText == null || searchText.isEmpty()) {
-                    displayError("Find field cannot be empty!");
+                    displayError("Search Text cannot be empty!");
                     return;
                 }
                 if (dirPath == null || dirPath.isEmpty()) {
-                    displayError("Directory field cannot be empty!");
+                    displayError("Starting Folder cannot be empty!");
                     return;
                 }
                 
@@ -379,7 +393,7 @@ public class FileSearchUI {
                 }
                 
                 //Remove earlier elements if any
-                model.removeAllElements();
+                resultTableModel.setRowCount(0);
 
                 //Holds the Corpus information related to the dirPath
                 CorpusType projCorpusInfo = null;
@@ -397,7 +411,10 @@ public class FileSearchUI {
                     searchParams.put(RECURSIVE_SEARCH, recursiveSearch);
                     searchParams.put(SKIP_HIDDEN_ITEMS, skipHiddenItems);
                     searchParams.put(EXTNS_SEARCH, selectedExtns);
-                    
+                    //Set the file name pattern only if it's not set
+                    if(fileNamePattern != null){
+                        searchParams.put(FILENAME_PATTERN, fileNamePattern);
+                    }
                     //Get the dirPath sepcific Corpus Info
                     projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, searchParams);
                 
@@ -413,8 +430,8 @@ public class FileSearchUI {
                 Map<Integer, Float> docScoreMap = mainProc.triggerQuery(searchText);
 
                 if (docScoreMap == null || docScoreMap.isEmpty()) {
-                    //Display one element indicating that no results could be found
-                    model.addElement(new DocumentWrapper(null));
+                    //TODO: Display one element indicating that no results could be found
+                    ;
                 } else {
 
                     //Sort and fetch top few results

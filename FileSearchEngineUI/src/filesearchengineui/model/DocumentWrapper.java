@@ -11,12 +11,16 @@ public class DocumentWrapper {
     private String data;
     private String filePath; //full path of document
 
+    @Override
+    public String toString(){
+        return filePath;
+    }
     /**
      *
      * @param filePath
      * @return
      */
-    private static String readFile(String filePath) throws FileNotFoundException, IOException {
+    private String readFile(String filePath) throws FileNotFoundException, IOException {
         StringBuilder sb = new StringBuilder(128);
         char[] buffer = new char[1024];
         

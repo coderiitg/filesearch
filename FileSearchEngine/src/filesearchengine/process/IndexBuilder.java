@@ -138,6 +138,8 @@ public class IndexBuilder {
             //Get the last modified date of file
             Long lastModifiedDate = file.lastModified();
             docInfo.setLastModifiedDate(lastModifiedDate);
+            //Set the file size
+            docInfo.setFileSize(file.length());
             return docId;
         } finally {
             if (is != null) {
@@ -384,8 +386,6 @@ public class IndexBuilder {
      */
     public CorpusType getCorpusInfo(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException,
                                                                    IOException {
-        //TODO: delete the test code
-        searchParams.put(FILENAME_PATTERN, "Cricket");
         //indexedFiles containts the DocIds if documenrs that have to be searched
         Set<Integer> docIdsToSearch = fetchIndexFromStorage(rootDirFullPath, searchParams);
 
