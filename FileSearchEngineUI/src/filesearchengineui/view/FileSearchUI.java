@@ -9,8 +9,11 @@ import static filesearchengine.common.SearchEngineConstants.FILENAME_PATTERN;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
 
+import filesearchengine.process.FileNameSearch;
 import filesearchengine.process.IndexBuilder;
 import filesearchengine.process.MainQueryProcess;
+
+import filesearchengineui.common.CommonConstants;
 
 import filesearchengineui.model.DocumentWrapper;
 import filesearchengineui.model.FileSizeWrapper;
@@ -33,6 +36,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -379,32 +383,52 @@ public class FileSearchUI {
         }
 
         /**
-         *Adds a search result to ResultTableModel
+         *Add a search result to ResultTableModel
+         * @param docInfo
+         */
+        private void addSearchResultToModel(DocInfo docInfo){
+            //{"Name", "Location", "Type", "Size", "Modified Date"}
+            //Get the full file path
+            String filePath = docInfo.getFilePath();
+            //Get the file name
+            String baseFileName = docInfo.getBaseFileName();
+            //get the file extension if any
+            String fileType = docInfo.getFileType();
+            //get the file size in bytes
+            long fileSize = docInfo.getFileSize();
+            //get the last modified date in millis
+            long lastModifiedDateMillis = docInfo.getLastModifiedDate();
+
+            resultTableModel.addRow(new Object[] {
+                                    baseFileName, new DocumentWrapper(filePath), fileType,
+                                    new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
+            });
+        }
+        
+        /**
+         *Adds a search results to ResultTableModel(to be used when content search is performed)
          * @param docIdSet
          * @param docIdFileMap
          */
-        private void addSearchResultToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
+        private void addSearchResultsToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
             for (Integer docId : docIdSet) {
                 DocInfo docInfo = docIdFileMap.get(docId);
-                //{"Name", "Location", "Type", "Size", "Modified Date"}
-                //Get the full file path
-                String filePath = docInfo.getFilePath();
-                //Get the file name
-                String baseFileName = docInfo.getBaseFileName();
-                //get the file extension if any
-                String fileType = docInfo.getFileType();
-                //get the file size in bytes
-                long fileSize = docInfo.getFileSize();
-                //get the last modified date in millis
-                long lastModifiedDateMillis = docInfo.getLastModifiedDate();
-
-                resultTableModel.addRow(new Object[] {
-                                        baseFileName, new DocumentWrapper(filePath), fileType,
-                                        new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
-                });
+                if(docInfo != null){
+                    addSearchResultToModel(docInfo);
+                }
             }
         }
         
+        /**
+         *Adds a search results to ResultTableModel(to be used when a FileName only search is performed)
+         * @param results
+         */
+        private void addSearchResultsToModel(List<DocInfo> results) {
+            int resultSize = results.size();
+            for (int i = 0; i < resultSize && i < CommonConstants.MAX_DISP_RESULTS; i++) {
+                addSearchResultToModel(results.get(i));
+            }
+        }
         
         private Set<String> fetchSelectedExtns(){
             Set<String> selectedExtns = new HashSet<String>();
@@ -422,12 +446,12 @@ public class FileSearchUI {
             @Override
             public void actionPerformed(ActionEvent e) {
                
-                String searchText = findText.getText();
+                String searchText = findText.getText().trim();
                 String dirPath = dirPathText.getText();
-                String fileNamePattern = fileNameText.getText();
+                String fileNamePattern = fileNameText.getText().trim();
                 
-                if (searchText == null || searchText.isEmpty()) {
-                    displayError("Search Text cannot be empty!");
+                if (searchText.isEmpty() && fileNamePattern.isEmpty()) {
+                    displayError("Either one of Search Text and File Name is mandatory");
                     return;
                 }
                 if (dirPath == null || dirPath.isEmpty()) {
@@ -447,9 +471,6 @@ public class FileSearchUI {
                 //Remove earlier search results
                 resultTableModel.setRowCount(0);
 
-                //Holds the Corpus information related to the dirPath
-                CorpusType projCorpusInfo = null;
-
                 //Get the corpus info pertaining to the current directory alone
                 try {
                     //Should subfolders be checked
@@ -467,31 +488,46 @@ public class FileSearchUI {
                     if(fileNamePattern != null){
                         searchParams.put(FILENAME_PATTERN, fileNamePattern);
                     }
-                    //Get the dirPath sepcific Corpus Info
-                    projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, searchParams);
+                    
+                    //Index Re-building and query handling is handled only if SearchText is actually provided
+                    if(!searchText.isEmpty()){
+                        //Get the dirPath sepcific Corpus Info
+                        CorpusType projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, searchParams);    
+                        //Initialize the query process
+                        MainQueryProcess mainProc = new MainQueryProcess(projCorpusInfo);
+
+                        //Query with search text and get the score for each document
+                        Map<Integer, Float> docScoreMap = mainProc.triggerQuery(searchText);
+
+                        if (docScoreMap == null || docScoreMap.isEmpty()) {
+                            //TODO: Display one element indicating that no results could be found
+                            ;
+                        } else {
+
+                            //Sort and fetch top few results
+                            Map<Integer, Float> sortedDocScoreMap =
+                                CommonUtils.sortByValue(docScoreMap, CommonConstants.MAX_DISP_RESULTS /*fetch top results*/);
+                            //add the search results iteratively
+                            addSearchResultsToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
+                        }
+                    }
+                    else{//It's a file name only search
+                        FileNameSearch fileNameSearchProc = new FileNameSearch();
+                        //Get results through FileName only search
+                        List<DocInfo> results = fileNameSearchProc.getFilesWithPattern(dirPath, searchParams);
+                        
+                        //add search results to model
+                        addSearchResultsToModel(results);
+                        
+                    }
+                    
                 
                 } catch (FileNotFoundException ex) {
                     displayError(ex.getMessage());
                 } catch (IOException ex) {
                     displayError(ex.getMessage());
                 }
-                //Initialize the query process
-                MainQueryProcess mainProc = new MainQueryProcess(projCorpusInfo);
-
-                //Query with search text and get the score for each document
-                Map<Integer, Float> docScoreMap = mainProc.triggerQuery(searchText);
-
-                if (docScoreMap == null || docScoreMap.isEmpty()) {
-                    //TODO: Display one element indicating that no results could be found
-                    ;
-                } else {
-
-                    //Sort and fetch top few results
-                    Map<Integer, Float> sortedDocScoreMap =
-                        CommonUtils.sortByValue(docScoreMap, 10 /*fetch top results*/);
-                    //add the search results iteratively
-                    addSearchResultToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
-                }
+                
             }
         }
     }

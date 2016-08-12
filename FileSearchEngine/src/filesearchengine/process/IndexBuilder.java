@@ -302,10 +302,10 @@ public class IndexBuilder {
                         String filePath = childFile.getCanonicalPath();
                         //check if file name also has to be matched
                         if (fileNamePattern != null) {
-                            String baseFileName = CommonUtils.getBaseFileName(filePath);
+                            String fileName = childFile.getName();
                             //Ignore if the current file doesn't match the pattern
                             if (!Pattern.compile(Pattern.quote(fileNamePattern),
-                                                 Pattern.CASE_INSENSITIVE).matcher(baseFileName).find()) {
+                                                 Pattern.CASE_INSENSITIVE).matcher(fileName).find()) {
                                 continue;
                             }
                         }
@@ -340,7 +340,7 @@ public class IndexBuilder {
         }
     }
     
-
+    /*
     public void displayIndex() {
         System.out.println("***********BEGIN Inverted Index CONTENT***********");
         if (invertedIndex != null && !invertedIndex.isEmpty()) {
@@ -356,7 +356,7 @@ public class IndexBuilder {
         }
         System.out.println("***********END Inverted Index CONTENT***********");
     }
-
+    */
 
     /**
      *
@@ -386,7 +386,7 @@ public class IndexBuilder {
      */
     public CorpusType getCorpusInfo(String rootDirFullPath, Map<String, Object> searchParams) throws FileNotFoundException,
                                                                    IOException {
-        //indexedFiles containts the DocIds if documenrs that have to be searched
+        //indexedFiles containts the DocIds of documenrs that have to be searched
         Set<Integer> docIdsToSearch = fetchIndexFromStorage(rootDirFullPath, searchParams);
 
         //get the docIdInfoSubMap corresponding to indexedFiles
