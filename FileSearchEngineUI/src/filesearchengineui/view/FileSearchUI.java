@@ -13,6 +13,8 @@ import filesearchengine.process.IndexBuilder;
 import filesearchengine.process.MainQueryProcess;
 
 import filesearchengineui.model.DocumentWrapper;
+import filesearchengineui.model.FileSizeWrapper;
+import filesearchengineui.model.ResultTableModel;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -26,6 +28,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.text.SimpleDateFormat;
+
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -55,7 +60,9 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 
 public class FileSearchUI {
 
@@ -75,7 +82,7 @@ public class FileSearchUI {
                          UnsupportedLookAndFeelException ex) {
                 }
 
-                JFrame frame = new JFrame("File Search");
+                JFrame frame = new JFrame("Swift File Search");
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 frame.setLocation(100, 100);
                 frame.setSize(1200, 700);
@@ -86,19 +93,6 @@ public class FileSearchUI {
                 frame.setVisible(true);
             }
         });
-    }
-
-    
-    class ResultTableModel extends DefaultTableModel{
-        
-        public ResultTableModel(Object[] header, int rows){
-            super(header, rows);    
-        }
-        
-        @Override
-        public boolean isCellEditable(int row, int column){  
-            return false;  
-        }
     }
 
     class ExtnWrapperRenderer implements ListCellRenderer
@@ -155,13 +149,16 @@ public class FileSearchUI {
         JButton browseBtn = new JButton("Browse");
         JFileChooser fileChooser = new JFileChooser();
 
+        //Table Model for Result Table
         private DefaultTableModel resultTableModel;
         private final JTextArea fileContent = new JTextArea(5, 40);
         private IndexBuilder indexBuilder = new IndexBuilder();
         ExtnWrapper[] extnWrappers;
         
-        public MainSearchPane() {
-            
+        /**
+         * Adds the Search Pane with all the components at the NORTH of the Main Pane
+         */
+        private void constructSearchPane(){
             //Get the set of extensions supported
             Set<String> suppExtns = CustomFileFilter.allSuppExtns;
             if(suppExtns == null || suppExtns.isEmpty()){
@@ -177,8 +174,9 @@ public class FileSearchUI {
                 i++;
             }
             
-            setLayout(new BorderLayout());
             JPanel searchPane = new JPanel();
+            
+            //GrouopLayout for SearchPane
             GroupLayout layout = new GroupLayout(searchPane);
             searchPane.setLayout(layout);
 
@@ -225,6 +223,7 @@ public class FileSearchUI {
             extnCombo.setMaximumSize(new Dimension(1,25));
             //Set the renderer
             extnCombo.setRenderer(new ExtnWrapperRenderer());
+            
             extnCombo.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent e) {
                     JComboBox cb = (JComboBox) e.getSource();
@@ -234,6 +233,7 @@ public class FileSearchUI {
                 }
             });
             
+            //Defining the horizontal alignment
             layout.setHorizontalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(findLabel)
@@ -264,7 +264,7 @@ public class FileSearchUI {
             //Ensure that the buttons stay the same size
             layout.linkSize(SwingConstants.HORIZONTAL, searchBtn, browseBtn);
             
-            
+            //Defining the Vertical alignment
             layout.setVerticalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(findLabel)
@@ -285,11 +285,40 @@ public class FileSearchUI {
                         .addComponent(extnCombo)))
             );
             
+            //Define Action Listeners on the Search button
+            QueryBtnHandler queryHandler = new QueryBtnHandler();
+
+            searchBtn.addActionListener(queryHandler);
+            findText.addActionListener(queryHandler);
+            
             add(searchPane, BorderLayout.NORTH);
-
+        }
+        
+        /**
+         * Adds the Result Pane with all the components at the CENTER of the Main Pane
+         */
+        private void constructResultPane(){
             resultTableModel = new ResultTableModel(new String[]{"Name", "Path", "Type", "Size", "Modified Date"}, 0);
-
+            
             final JTable resultTable = new JTable(resultTableModel);
+            
+            TableCellRenderer dateCellRenderer = new DefaultTableCellRenderer() {
+
+                SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss a");
+
+                public Component getTableCellRendererComponent(JTable table,
+                        Object value, boolean isSelected, boolean hasFocus,
+                        int row, int column) {
+                    if( value instanceof Date) {
+                        value = sdf.format(value);
+                    }
+                    return super.getTableCellRendererComponent(table, value, isSelected,
+                            hasFocus, row, column);
+                }
+            };
+            
+            //Setting the cell renderer on the Date's column so that date value will be formatted appropriately
+            resultTable.getColumnModel().getColumn(4).setCellRenderer(dateCellRenderer);
             resultTable.setAutoCreateRowSorter(true);
             resultTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
                 @Override
@@ -316,7 +345,12 @@ public class FileSearchUI {
             resultPane.setBorder(resultPaneTitle);
 
             add(resultPane, BorderLayout.CENTER);
-
+        }
+        
+        /**
+         * Adds the Content Pane with all the components at the EAST of the Main Pane
+         */
+        private void constructContentPane(){
             fileContent.setEditable(false);
             JScrollPane contentPane = new JScrollPane(fileContent);
             //TitledBorder for ContentPane
@@ -327,32 +361,50 @@ public class FileSearchUI {
             contentPane.setBorder(contentPaneTitle);
 
             add(contentPane, BorderLayout.EAST);
-            QueryBtnHandler queryHandler = new QueryBtnHandler();
+        }
+        
+        public MainSearchPane() {
+            
+            setLayout(new BorderLayout());
+            
+            constructSearchPane(); //Add the Search Pane at the NORTH
 
-            searchBtn.addActionListener(queryHandler);
-            findText.addActionListener(queryHandler);
+            constructResultPane(); //Add the Result Pane at the CENTER
+            
+            constructContentPane(); //Add the Result Pane at the EAST
         }
 
         private void displayError(String errorMsg) {
             JOptionPane.showMessageDialog(MainSearchPane.this, errorMsg, "Error", JOptionPane.ERROR_MESSAGE);
         }
 
-        private void addListToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
+        /**
+         *Adds a search result to ResultTableModel
+         * @param docIdSet
+         * @param docIdFileMap
+         */
+        private void addSearchResultToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
             for (Integer docId : docIdSet) {
                 DocInfo docInfo = docIdFileMap.get(docId);
                 //{"Name", "Location", "Type", "Size", "Modified Date"}
+                //Get the full file path
                 String filePath = docInfo.getFilePath();
-                DocumentWrapper docWrapper = new DocumentWrapper(filePath);
+                //Get the file name
                 String baseFileName = docInfo.getBaseFileName();
+                //get the file extension if any
                 String fileType = docInfo.getFileType();
+                //get the file size in bytes
                 long fileSize = docInfo.getFileSize();
-                long lastModifiedDate = docInfo.getLastModifiedDate();
+                //get the last modified date in millis
+                long lastModifiedDateMillis = docInfo.getLastModifiedDate();
+
                 resultTableModel.addRow(new Object[] {
-                                        baseFileName, docWrapper, fileType, CommonUtils.getFormattedFileSize(fileSize),
-                                        CommonUtils.getFormattedDate(lastModifiedDate, null)
-                });                
+                                        baseFileName, new DocumentWrapper(filePath), fileType,
+                                        new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
+                });
             }
         }
+        
         
         private Set<String> fetchSelectedExtns(){
             Set<String> selectedExtns = new HashSet<String>();
@@ -392,7 +444,7 @@ public class FileSearchUI {
                     return;
                 }
                 
-                //Remove earlier elements if any
+                //Remove earlier search results
                 resultTableModel.setRowCount(0);
 
                 //Holds the Corpus information related to the dirPath
@@ -438,7 +490,7 @@ public class FileSearchUI {
                     Map<Integer, Float> sortedDocScoreMap =
                         CommonUtils.sortByValue(docScoreMap, 10 /*fetch top results*/);
                     //add the search results iteratively
-                    addListToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
+                    addSearchResultToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
                 }
             }
         }

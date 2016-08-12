@@ -279,24 +279,6 @@ public class CommonUtils {
         return null;
     }
     
-    private static final int KB = 1024; //1 Kilo byte
-    private static final int MB = 1024*KB; //1 Mega byte
-    private static final int GB = 1024*MB; //1 Giga byte
-    
-    /**
-     *Returns the file size in GB/MB/KB
-     * @param fileSize
-     * @return
-     */
-    public static String getFormattedFileSize(long fileSize){
-         if(fileSize /GB != 0){
-             return String.format("%.2f GB", (float)fileSize/GB);
-         }
-         if(fileSize/MB != 0){
-             return String.format("%.2f MB", (float)fileSize/MB);
-         }
-         return String.format("%.2f KB", (float)fileSize/KB);
-    }
     
     /**
      *
