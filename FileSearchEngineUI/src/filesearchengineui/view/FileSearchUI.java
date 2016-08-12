@@ -470,7 +470,9 @@ public class FileSearchUI {
                 
                 //Remove earlier search results
                 resultTableModel.setRowCount(0);
-
+                //clear the file content area
+                fileContent.setText("");
+                
                 //Get the corpus info pertaining to the current directory alone
                 try {
                     //Should subfolders be checked
@@ -501,7 +503,7 @@ public class FileSearchUI {
 
                         if (docScoreMap == null || docScoreMap.isEmpty()) {
                             //TODO: Display one element indicating that no results could be found
-                            ;
+                            fileContent.setText("The search returned 0 results!!");
                         } else {
 
                             //Sort and fetch top few results
@@ -515,9 +517,14 @@ public class FileSearchUI {
                         FileNameSearch fileNameSearchProc = new FileNameSearch();
                         //Get results through FileName only search
                         List<DocInfo> results = fileNameSearchProc.getFilesWithPattern(dirPath, searchParams);
-                        
-                        //add search results to model
-                        addSearchResultsToModel(results);
+                        if(results.isEmpty()){
+                            //TODO: Display one element indicating that no results could be found
+                            fileContent.setText("The search returned 0 results!!");
+                        }
+                        else{
+                            //add search results to model
+                            addSearchResultsToModel(results);
+                        }
                         
                     }
                     

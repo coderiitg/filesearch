@@ -46,7 +46,7 @@ public class FileNameSearch {
                         continue;
                     }
 
-                    //Create a DocInfo
+                    //Create a DocInfo, with default doc id
                     DocInfo docInfo = new DocInfo(-1, childFile.getCanonicalPath());
                     //Get the last modification date of child file
                     long lastModifiedDate = childFile.lastModified();
