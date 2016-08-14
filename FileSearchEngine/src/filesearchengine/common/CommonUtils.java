@@ -240,25 +240,11 @@ public class CommonUtils {
      * @param filePath
      * @return
      */
-    public static String getBaseFileName(String filePath){
-        if(filePath != null && !filePath.isEmpty()){
+    public static String getBaseFileName(String filePath) {
+        if (filePath != null && !filePath.isEmpty()) {
             int lastSeperatorPos = filePath.lastIndexOf(File.separatorChar);
-            int lastPeriodPos = filePath.lastIndexOf('.');
-            if(lastSeperatorPos != -1){
-                if(lastPeriodPos != -1){
-                    return filePath.substring(lastSeperatorPos + 1, lastPeriodPos);
-                }
-                else{
-                    return filePath.substring(lastSeperatorPos + 1);
-                }
-            }
-            else{
-                if(lastPeriodPos != -1){
-                    return filePath.substring(0, lastPeriodPos);
-                }
-                else{
-                    return filePath;
-                }
+            if (lastSeperatorPos != -1) {
+                return filePath.substring(lastSeperatorPos + 1);
             }
         }
         return filePath;
@@ -266,14 +252,14 @@ public class CommonUtils {
     
     /**
      *Get the extension from file path
-     * @param filePath
+     * @param fileName
      * @return null if filePath is null or empty or doesn't have extension
      */
-    public static String getFileExtension(String filePath){
-        if(filePath != null && !filePath.isEmpty()){
-            int lastPeriodPos = filePath.lastIndexOf('.');
+    public static String getFileExtension(String fileName){
+        if(fileName != null && !fileName.isEmpty()){
+            int lastPeriodPos = fileName.lastIndexOf('.');
             if(lastPeriodPos != -1){
-                return filePath.substring(lastPeriodPos + 1);
+                return fileName.substring(lastPeriodPos + 1).toLowerCase();
             }
         }
         return null;
@@ -292,5 +278,45 @@ public class CommonUtils {
         }
         SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
         return sdf.format(new Date(millis));
+    }
+    
+    /**
+     *Check whether the block is binary or text
+     * @param block
+     * @return
+     */
+    public static boolean isBlockBinary(String block) {
+        if (block != null) {
+            char[] buffer = block.toCharArray();
+            boolean isBlockBinary = false;
+            int numWeirdChars = 0;
+            int charsRead = block.length();
+            if (charsRead != 0) {
+                for (int i = 0; i < charsRead; i++) {
+                    char ch = buffer[i];
+                    //Return as binary if a null character is encountered
+                    if (ch == '\0') {
+                        isBlockBinary = true;
+                        break;
+                    }
+                    if (ch == '\n' || ch == '\r' || ch == '\b' || ch == '\t') {
+                        continue;
+                    }
+                    //check if char is not in ascii
+                    if (ch > 127 || ch < 32)
+                        numWeirdChars++;
+                }
+            }
+            if (!isBlockBinary) {
+                //what is the ratio of weird chars to block size
+                float ratio = (float) numWeirdChars / charsRead;
+                if (ratio < 30) {
+                    isBlockBinary = false;
+                }
+            }
+
+            return isBlockBinary;
+        }
+        return false;
     }
 }

@@ -65,6 +65,12 @@ public class IndexBuilder {
      */
     Map<String, Float> idfVector = new HashMap<String, Float>();
 
+    /**
+     * key - extension
+     * value - true if extension is Binary, false otherwise
+     */
+    Map<String, Boolean> extensionBinary = new HashMap<String, Boolean>();
+    
     public Map<String, Float> getIdfVector() {
         return idfVector;
     }
@@ -78,24 +84,27 @@ public class IndexBuilder {
 
 
         if (!invertedIndex.containsKey(term)) {
+            //this term is encountered for the first time in corpus
             Map<Integer, Integer> docIdFreqMap = new HashMap<Integer, Integer>();
-            //Insert doc info
+            //Set the frequency of term in document
             docIdFreqMap.put(docId, 1);
-            //Insert the map into invertedIndex
+            //Insert the map into invertedIndex against the term
             invertedIndex.put(term, docIdFreqMap);
             //Set the Document Count against the term
             termDocCountMap.put(term, 1);
         } else {
-            //Iterate through docIdFreqMap
+            //the term was already encountered before
+            //get the docIdFreqMap corresponding to the term
             Map<Integer, Integer> docIdFreqMap = invertedIndex.get(term);
+            //the number of instances of term in this document
             Integer curDocIdFreq = docIdFreqMap.get(docId);
             if (curDocIdFreq != null) {
                 docIdFreqMap.put(docId, ++curDocIdFreq);
             } else {
-                //Insert doc info
+                //this is the first occurrences of term in the document
                 docIdFreqMap.put(docId, 1);
-                //Set the Document Count against the term
-                termDocCountMap.put(term, 1);
+                //incremment the number of documents containing this term
+                termDocCountMap.put(term, termDocCountMap.get(term) + 1);
             }
         }
     }
@@ -103,6 +112,9 @@ public class IndexBuilder {
     /**
      *
      * @param file
+     * @return a unique id for file if it's text file, -1 otherwise
+     * @throws FileNotFoundException
+     * @throws IOException
      */
     private int readFile(File file) throws FileNotFoundException, IOException {
         BufferedReader is = null;
@@ -111,7 +123,31 @@ public class IndexBuilder {
             is = new BufferedReader(new FileReader(file));
             String line = null;
             String filePath = file.getCanonicalPath();
-
+            
+            //First checks wether the file is binary or text and proceeeds only if it's binary
+            //This is done by reading atleast 512 characters
+            StringBuilder sb = new StringBuilder();
+            
+            //indicates whether the file is binary or text
+            boolean isFileBinary = false;
+            
+            while ((line = is.readLine()) != null) {
+                sb.append(line);
+                if (sb.length() >= 512) {
+                    //If length of chars read has already exceeded then check whether the block is text
+                    isFileBinary = CommonUtils.isBlockBinary(sb.toString());
+                    if (isFileBinary) {
+                        break;
+                    }
+                }
+            }
+            
+            //If the file is binary, then no need to proceed further, so return -1 indicating that file isn't text
+            if(isFileBinary){
+                return -1;
+            }
+            
+            //Otherwise the file is determined to be text type
             //Check whether file is already indexed
             if (!fileDocIdMap.containsKey(filePath)) {
                 //If not create a new index
@@ -121,8 +157,11 @@ public class IndexBuilder {
             }
 
             Integer docId = fileDocIdMap.get(filePath);
-
-            while ((line = is.readLine()) != null) {
+            
+            //Reinitialize the valaue of line as some of the contents have been already read
+            line = sb.toString();
+            
+            while (line != null) {
                 //Get the normalized tokens from line i.e string values that can be considered as words
                 List<String> normalizedTokens = TokenNormalizer.getNormalizedTokens(line);
                 if (normalizedTokens != null) {
@@ -130,6 +169,8 @@ public class IndexBuilder {
                         insertTerm(docId, token);
                     }
                 }
+                //Read the next line
+                line = is.readLine();
             }
 
             //Set the last modified date in document info
@@ -229,7 +270,7 @@ public class IndexBuilder {
             int totalDocs = docIdInfoMap.keySet().size();
 
             for (String term : termDocCountMap.keySet()) {
-                float termWeight = CommonUtils.round(Math.log(totalDocs / termDocCountMap.get(term)), 2);
+                float termWeight = CommonUtils.round(Math.log(totalDocs / termDocCountMap.get(term)), 4);
                 idfVector.put(term, termWeight);
             }
         }
@@ -246,8 +287,9 @@ public class IndexBuilder {
         //Stores the list of files indexed in this re-build index process
         private Set<Integer> curIndexedFiles = new HashSet<Integer>();
         
-        //indicates whether only file name search is requested by the user
-        private boolean fileNameSearchOnly = false;
+        //indicates whether extension binary type has to be cached
+        //TODO: in future accpet this parameter to be configured from UI
+        private boolean extensionTypeCache = true;
         
         private ReBuildIndex(Map<String, Object> searchParams){
             //should recursive search be performed
@@ -289,8 +331,9 @@ public class IndexBuilder {
          */
         private void reBuild(File rootDir) throws FileNotFoundException, IOException {
             //Fetch only the files with selected Extns
-            File[] listFiles = rootDir.listFiles(new CustomFileFilter(selectedExtns));
-
+            //File[] listFiles = rootDir.listFiles(new CustomFileFilter(selectedExtns));
+            File[] listFiles = rootDir.listFiles();
+            
             if (listFiles != null) {
                 for (File childFile : listFiles) {
                     //skip processing if skiphidden files is set and childFile is hidden
@@ -300,15 +343,26 @@ public class IndexBuilder {
                     if (!childFile.isDirectory()) {
                         //This is not a directory
                         String filePath = childFile.getCanonicalPath();
+                        String fileName = childFile.getName();
                         //check if file name also has to be matched
                         if (fileNamePattern != null) {
-                            String fileName = childFile.getName();
                             //Ignore if the current file doesn't match the pattern
                             if (!Pattern.compile(Pattern.quote(fileNamePattern),
                                                  Pattern.CASE_INSENSITIVE).matcher(fileName).find()) {
                                 continue;
                             }
                         }
+                        //check whether the file is binary or text based on file extension
+                        String fileExtension = CommonUtils.getFileExtension(fileName);
+                        if(fileExtension != null && extensionTypeCache){
+                            //check wether the type has been already determined
+                            if(extensionBinary.containsKey(fileExtension)){
+                                //Indicates that the file is binary
+                                //so, shouldn't proceed further
+                                continue;
+                            }
+                        }
+                        
                         //Get the docId corresponding to the filePath
                         Integer docId = fileDocIdMap.get(filePath);
 
@@ -330,6 +384,15 @@ public class IndexBuilder {
                             remFileFromIndex(filePath);
                         }
                         docId = readFile(childFile);
+                        //if docId is -1, then childFile is binary type, so this should be skipped
+                        if(docId == -1){
+                            //this extension was identified to be a binary
+                            //so insert it into the cache
+                            if(fileExtension != null && extensionTypeCache){
+                                extensionBinary.put(fileExtension, true);
+                            }
+                            continue;
+                        }
                         //add to the list of processed files
                         curIndexedFiles.add(docId);
                     } else if (recurse) { //recurse further

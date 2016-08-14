@@ -1,5 +1,7 @@
 package filesearchengineui.model;
 
+import filesearchengine.common.CommonUtils;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,11 +12,18 @@ import java.io.IOException;
 public class DocumentWrapper {
     private String data;
     private String filePath; //full path of document
+    //Is the file binary
+    private boolean fileBinary = false;
+
+    public boolean isFileBinary() {
+        return fileBinary;
+    }
 
     @Override
     public String toString(){
         return filePath;
     }
+    
     /**
      *
      * @param filePath
@@ -22,21 +31,27 @@ public class DocumentWrapper {
      */
     private String readFile(String filePath) throws FileNotFoundException, IOException {
         StringBuilder sb = new StringBuilder(128);
-        char[] buffer = new char[1024];
-        
+
         BufferedReader reader = null;
         try{
             reader = new BufferedReader(new FileReader(new File(filePath)));
-            int charsRead = -1;
-            int i = 0;
             
+            String line = null;
             
-            while((charsRead = reader.read(buffer)) > -1){
-                //Iterate only 4 times i.e read 4*1024 characters
-                if(i > 4)
-                    break;
-                sb.append(buffer, 0, charsRead);
-                i++;
+            while(((line = reader.readLine()) != null) && (sb.length()<4096)){
+                sb.append(line);
+                //Appending a new line character
+                sb.append("\n");
+            }
+            
+            int blockEnd = Math.min(sb.length(), 4096);
+            //Check whether the block is binary
+            fileBinary = CommonUtils.isBlockBinary(sb.substring(0, blockEnd));
+            
+            //If the file is binary then, data cannot be displayed on UI
+            if(fileBinary){
+                //file cannot be read
+                return null;
             }
             
             //If there is still some content to be read, append ...........
@@ -68,8 +83,8 @@ public class DocumentWrapper {
     }
 
     public String getData() {
-        //Read the file if data is not already set
-        if(data == null){
+        //Read the file if data is not already set and the file is not binary
+        if(data == null && !fileBinary){
             try {
                 data = readFile(filePath);
             } catch (FileNotFoundException e) {

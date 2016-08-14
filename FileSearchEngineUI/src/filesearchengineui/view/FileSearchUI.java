@@ -2,9 +2,7 @@ package filesearchengineui.view;
 
 import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
-import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
-import static filesearchengine.common.SearchEngineConstants.EXTNS_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.FILENAME_PATTERN;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
@@ -21,7 +19,6 @@ import filesearchengineui.model.ResultTableModel;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -35,7 +32,6 @@ import java.text.SimpleDateFormat;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,18 +42,15 @@ import static javax.swing.GroupLayout.Alignment.BASELINE;
 import static javax.swing.GroupLayout.Alignment.LEADING;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.ListCellRenderer;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -92,54 +85,9 @@ public class FileSearchUI {
                 frame.setSize(1200, 700);
                 frame.setLayout(new BorderLayout());
                 frame.add(new MainSearchPane());
-                //frame.pack();
-                //frame.setLocationRelativeTo(null);
                 frame.setVisible(true);
             }
         });
-    }
-
-    class ExtnWrapperRenderer implements ListCellRenderer
-    {
-        JCheckBox checkBox;
-      
-        public ExtnWrapperRenderer()
-        {
-            checkBox = new JCheckBox();
-
-        }
-        public Component getListCellRendererComponent(JList list,
-                                                      Object value,
-                                                      int index,
-                                                      boolean isSelected,
-                                                      boolean cellHasFocus)
-        {
-
-            ExtnWrapper extnCheckBox = (ExtnWrapper)value;
-            checkBox.setText(extnCheckBox.extension);
-            checkBox.setSelected(extnCheckBox.chosen);
-            return checkBox;
-        }
-    }
-      
-    class ExtnWrapper
-    {
-        String extension;
-        Boolean chosen;
-      
-        public ExtnWrapper(String extension, Boolean chosen)
-        {
-            this.extension = extension;
-            this.chosen = chosen;
-        }
-
-        public String getExtension() {
-            return extension;
-        }
-
-        public Boolean isChosen() {
-            return chosen;
-        }
     }
     
     public class MainSearchPane extends JPanel {
@@ -153,30 +101,16 @@ public class FileSearchUI {
         JButton browseBtn = new JButton("Browse");
         JFileChooser fileChooser = new JFileChooser();
 
-        //Table Model for Result Table
-        private DefaultTableModel resultTableModel;
+        private JTable resultTable;
         private final JTextArea fileContent = new JTextArea(5, 40);
         private IndexBuilder indexBuilder = new IndexBuilder();
-        ExtnWrapper[] extnWrappers;
+        //Label to display the status
+        private JLabel statusLabel = new JLabel();
         
         /**
          * Adds the Search Pane with all the components at the NORTH of the Main Pane
          */
         private void constructSearchPane(){
-            //Get the set of extensions supported
-            Set<String> suppExtns = CustomFileFilter.allSuppExtns;
-            if(suppExtns == null || suppExtns.isEmpty()){
-                throw new RuntimeException("fatal error, supported extensions list is empty!!");
-            }
-            
-            //Create an array first
-            extnWrappers = new ExtnWrapper[suppExtns.size()];
-            //Construct extnWrappers array
-            int i = 0;
-            for(String extn : suppExtns){
-                extnWrappers[i] = new ExtnWrapper(extn, true);
-                i++;
-            }
             
             JPanel searchPane = new JPanel();
             
@@ -218,24 +152,7 @@ public class FileSearchUI {
             JLabel findLabel = new JLabel("Search Text:");
             JLabel fileNameLabel = new JLabel("File Name:");
             JLabel dirLabel = new JLabel("Starting Folder:");
-            JLabel fileTypeLabel = new JLabel("Extensions:");
             
-            //Initialize a combo box with the extension wrappers
-            JComboBox extnCombo = new JComboBox(extnWrappers);
-            
-            
-            extnCombo.setMaximumSize(new Dimension(1,25));
-            //Set the renderer
-            extnCombo.setRenderer(new ExtnWrapperRenderer());
-            
-            extnCombo.addActionListener(new ActionListener() {
-                public void actionPerformed(ActionEvent e) {
-                    JComboBox cb = (JComboBox) e.getSource();
-                    ExtnWrapper extnWrapper = (ExtnWrapper) cb.getSelectedItem();
-                    ExtnWrapperRenderer extnWrapperRenderer = (ExtnWrapperRenderer) cb.getRenderer();
-                    extnWrapperRenderer.checkBox.setSelected(extnWrapper.chosen = !extnWrapper.chosen);
-                }
-            });
             
             //Defining the horizontal alignment
             layout.setHorizontalGroup(layout.createSequentialGroup()
@@ -253,10 +170,7 @@ public class FileSearchUI {
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(recursiveCheckBox)
-                        .addComponent(hiddenFileCheckBox))
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(fileTypeLabel)
-                        .addComponent(extnCombo)))
+                        .addComponent(hiddenFileCheckBox)))
             );
             
             //Ensure that text fields stay the same size
@@ -283,10 +197,7 @@ public class FileSearchUI {
                         .addComponent(hiddenFileCheckBox)))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(fileNameLabel)
-                    .addComponent(fileNameText)
-                    .addGroup(layout.createParallelGroup(BASELINE)
-                        .addComponent(fileTypeLabel)
-                        .addComponent(extnCombo)))
+                    .addComponent(fileNameText))
             );
             
             //Define Action Listeners on the Search button
@@ -302,9 +213,9 @@ public class FileSearchUI {
          * Adds the Result Pane with all the components at the CENTER of the Main Pane
          */
         private void constructResultPane(){
-            resultTableModel = new ResultTableModel(new String[]{"Name", "Path", "Type", "Size", "Modified Date"}, 0);
+            DefaultTableModel resultTableModel = new ResultTableModel(new String[]{"Name", "Path", "Type", "Size", "Modified Date"}, 0);
             
-            final JTable resultTable = new JTable(resultTableModel);
+            resultTable = new JTable(resultTableModel);
             
             TableCellRenderer dateCellRenderer = new DefaultTableCellRenderer() {
 
@@ -332,7 +243,16 @@ public class FileSearchUI {
                         
                         //Set the file Content in the Content pane
                         if (docWrapper != null) {
-                            fileContent.setText(docWrapper.getData());
+                            String data = docWrapper.getData();
+                            if(data == null){
+                                if(docWrapper.isFileBinary()){
+                                    //If the file is of Binary type, then display an error message
+                                    displayError("The file format cannot be read by Swift File Search");
+                                }
+                            }
+                            else{
+                                fileContent.setText(data);
+                            }
                         } else {
                             fileContent.setText("");
                         }
@@ -347,7 +267,6 @@ public class FileSearchUI {
                                                  TitledBorder.CENTER, TitledBorder.TOP,
                                                  new Font("SansSerif", Font.BOLD, 14));
             resultPane.setBorder(resultPaneTitle);
-
             add(resultPane, BorderLayout.CENTER);
         }
         
@@ -367,6 +286,12 @@ public class FileSearchUI {
             add(contentPane, BorderLayout.EAST);
         }
         
+        private void constructStatusPane(){
+            JPanel statusPane = new JPanel();
+            statusPane.add(statusLabel);
+            add(statusPane, BorderLayout.SOUTH);
+        }
+        
         public MainSearchPane() {
             
             setLayout(new BorderLayout());
@@ -376,6 +301,8 @@ public class FileSearchUI {
             constructResultPane(); //Add the Result Pane at the CENTER
             
             constructContentPane(); //Add the Result Pane at the EAST
+            
+            constructStatusPane();
         }
 
         private void displayError(String errorMsg) {
@@ -398,7 +325,7 @@ public class FileSearchUI {
             long fileSize = docInfo.getFileSize();
             //get the last modified date in millis
             long lastModifiedDateMillis = docInfo.getLastModifiedDate();
-
+            DefaultTableModel resultTableModel = (DefaultTableModel) resultTable.getModel();
             resultTableModel.addRow(new Object[] {
                                     baseFileName, new DocumentWrapper(filePath), fileType,
                                     new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
@@ -430,17 +357,6 @@ public class FileSearchUI {
             }
         }
         
-        private Set<String> fetchSelectedExtns(){
-            Set<String> selectedExtns = new HashSet<String>();
-            for(ExtnWrapper extnWrapper : extnWrappers){
-                //If the extension was selected
-                if(extnWrapper.isChosen()){
-                    selectedExtns.add(extnWrapper.getExtension());
-                }
-            }
-            return selectedExtns;
-        }
-        
         public class QueryBtnHandler implements ActionListener {
 
             @Override
@@ -458,20 +374,20 @@ public class FileSearchUI {
                     displayError("Starting Folder cannot be empty!");
                     return;
                 }
-                
-                //Get the selected extension list
-                Set<String> selectedExtns = fetchSelectedExtns();
-                //throw an error if atleast one extension is not selected
-                
-                if(selectedExtns.isEmpty()){
-                    displayError("You must select atleast one extension");
-                    return;
-                }
-                
-                //Remove earlier search results
-                resultTableModel.setRowCount(0);
+
                 //clear the file content area
                 fileContent.setText("");
+                
+                //Remove earlier search results
+                try {
+                    ((DefaultTableModel)(resultTable.getModel())).setRowCount(0);
+                } catch (IndexOutOfBoundsException ie) {
+                    //TODO: identify why the exception occurs
+                    System.out.println("Encountered an exception while clearing results: " + ie.getMessage());
+                    //Retrying the result clearing
+                    ((DefaultTableModel)(resultTable.getModel())).setRowCount(0);
+                }
+
                 
                 //Get the corpus info pertaining to the current directory alone
                 try {
@@ -485,7 +401,7 @@ public class FileSearchUI {
                     Map<String, Object> searchParams = new HashMap<String, Object>();
                     searchParams.put(RECURSIVE_SEARCH, recursiveSearch);
                     searchParams.put(SKIP_HIDDEN_ITEMS, skipHiddenItems);
-                    searchParams.put(EXTNS_SEARCH, selectedExtns);
+                    
                     //Set the file name pattern only if it's not set
                     if(fileNamePattern != null){
                         searchParams.put(FILENAME_PATTERN, fileNamePattern);
@@ -503,14 +419,22 @@ public class FileSearchUI {
 
                         if (docScoreMap == null || docScoreMap.isEmpty()) {
                             //TODO: Display one element indicating that no results could be found
-                            fileContent.setText("The search returned 0 results!!");
+                            statusLabel.setText("The search returned 0 results");
                         } else {
 
                             //Sort and fetch top few results
                             Map<Integer, Float> sortedDocScoreMap =
-                                CommonUtils.sortByValue(docScoreMap, CommonConstants.MAX_DISP_RESULTS /*fetch top results*/);
+                                CommonUtils.sortByValue(docScoreMap,
+                                                        CommonConstants.MAX_DISP_RESULTS /*fetch top results*/);
                             //add the search results iteratively
                             addSearchResultsToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
+                            int numDocsReturned = sortedDocScoreMap.keySet().size();
+                            if (numDocsReturned <= CommonConstants.MAX_DISP_RESULTS) {
+                                statusLabel.setText("Found: " + numDocsReturned);
+                            } else {
+                                statusLabel.setText("Found: " + numDocsReturned + ", displaying the top " +
+                                                    CommonConstants.MAX_DISP_RESULTS);
+                            }
                         }
                     }
                     else{//It's a file name only search
@@ -519,13 +443,19 @@ public class FileSearchUI {
                         List<DocInfo> results = fileNameSearchProc.getFilesWithPattern(dirPath, searchParams);
                         if(results.isEmpty()){
                             //TODO: Display one element indicating that no results could be found
-                            fileContent.setText("The search returned 0 results!!");
+                            statusLabel.setText("The search returned 0 results");
                         }
-                        else{
+                        else {
                             //add search results to model
                             addSearchResultsToModel(results);
+                            int numDocsReturned = results.size();
+                            if (numDocsReturned <= CommonConstants.MAX_DISP_RESULTS) {
+                                statusLabel.setText("Found: " + numDocsReturned);
+                            } else {
+                                statusLabel.setText("Found: " + numDocsReturned + ", displaying " +
+                                                    CommonConstants.MAX_DISP_RESULTS + " of them");
+                            }
                         }
-                        
                     }
                     
                 

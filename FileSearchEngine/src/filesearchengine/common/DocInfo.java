@@ -36,8 +36,10 @@ public class DocInfo {
     public DocInfo(int docId, String filePath){
         this.docId = docId;
         this.filePath = filePath;
+        //Get the Base FineName from absolute filePath
         this.baseFileName = CommonUtils.getBaseFileName(filePath);
-        this.fileType = CommonUtils.getFileExtension(filePath);
+        //Get the file extension from base file name
+        this.fileType = CommonUtils.getFileExtension(baseFileName);
     }
 
     public void setFileSize(long fileSize) {
