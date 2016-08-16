@@ -20,6 +20,7 @@ import filesearchengineui.model.ResultTableModel;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.EventQueue;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -68,7 +69,9 @@ public class FileSearchUI {
         new filesearchengineui.view.FileSearchUI();
     }
 
+    public final JFrame frame = new JFrame("Swift File Search");
     public FileSearchUI() {
+        
         EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -79,7 +82,7 @@ public class FileSearchUI {
                          UnsupportedLookAndFeelException ex) {
                 }
 
-                JFrame frame = new JFrame("Swift File Search");
+                
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 frame.setLocation(100, 100);
                 frame.setSize(1200, 700);
@@ -111,12 +114,15 @@ public class FileSearchUI {
          * Adds the Search Pane with all the components at the NORTH of the Main Pane
          */
         private void constructSearchPane(){
+            JPanel searchPane = new JPanel(new FlowLayout(FlowLayout.LEADING));
             
-            JPanel searchPane = new JPanel();
-            
+            JPanel searchInputPane = new JPanel();
+            searchPane.add(searchInputPane);
+            searchInputPane.setBorder(BorderFactory.createTitledBorder(""));
+            //searchInputPane.setBackground(Color.white);
             //GrouopLayout for SearchPane
-            GroupLayout layout = new GroupLayout(searchPane);
-            searchPane.setLayout(layout);
+            GroupLayout layout = new GroupLayout(searchInputPane);
+            searchInputPane.setLayout(layout);
 
             layout.setAutoCreateGaps(true);
             layout.setAutoCreateContainerGaps(true);
@@ -149,25 +155,23 @@ public class FileSearchUI {
             //check hidden item check by default
             hiddenFileCheckBox.setSelected(false);
             
-            JLabel findLabel = new JLabel("Search Text:");
-            JLabel fileNameLabel = new JLabel("File Name:");
-            JLabel dirLabel = new JLabel("Starting Folder:");
+            JLabel findLabel = new JLabel("Search text:");
+            JLabel fileNameLabel = new JLabel("File name:");
+            JLabel dirLabel = new JLabel("Look in:");
             
-            
+
             //Defining the horizontal alignment
             layout.setHorizontalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(findLabel)
-                    .addComponent(dirLabel)
-                    .addComponent(fileNameLabel))
+                    .addComponent(fileNameLabel)
+                    .addComponent(dirLabel))
                 .addGroup(layout.createParallelGroup(LEADING)
-                    .addComponent(findText, 0, 600, Short.MAX_VALUE)
-                    .addComponent(dirPathText, 0, 600, Short.MAX_VALUE)
-                    .addComponent(fileNameText, 0, 600, Short.MAX_VALUE))
-                .addGroup(layout.createParallelGroup(LEADING)
-                    .addComponent(searchBtn)
-                    .addComponent(browseBtn))
-                .addGroup(layout.createParallelGroup(LEADING)
+                    .addComponent(findText, 0, 800, Short.MAX_VALUE)
+                    .addComponent(fileNameText, 0, 800, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(dirPathText, 0, 300, 725)
+                        .addComponent(browseBtn))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(recursiveCheckBox)
                         .addComponent(hiddenFileCheckBox)))
@@ -175,29 +179,29 @@ public class FileSearchUI {
             
             //Ensure that text fields stay the same size
             
-            layout.linkSize(SwingConstants.HORIZONTAL, findText, dirPathText);
+            //layout.linkSize(SwingConstants.HORIZONTAL, findText, dirPathText);
             layout.linkSize(SwingConstants.HORIZONTAL, findText, fileNameText);
             
             
             //Ensure that the buttons stay the same size
-            layout.linkSize(SwingConstants.HORIZONTAL, searchBtn, browseBtn);
+            //layout.linkSize(SwingConstants.HORIZONTAL, searchBtn, browseBtn);
             
             //Defining the Vertical alignment
             layout.setVerticalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(findLabel)
-                    .addComponent(findText)
-                    .addComponent(searchBtn))
-                .addGroup(layout.createParallelGroup(BASELINE)
-                    .addComponent(dirLabel)
-                    .addComponent(dirPathText)
-                    .addComponent(browseBtn)
-                    .addGroup(layout.createParallelGroup(BASELINE)
-                        .addComponent(recursiveCheckBox)
-                        .addComponent(hiddenFileCheckBox)))
+                    .addComponent(findText))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(fileNameLabel)
                     .addComponent(fileNameText))
+                .addGroup(layout.createParallelGroup(BASELINE)
+                    .addComponent(dirLabel)
+                    .addGroup(layout.createParallelGroup(BASELINE)
+                        .addComponent(dirPathText)
+                        .addComponent(browseBtn)))
+                .addGroup(layout.createParallelGroup(BASELINE)
+                    .addComponent(recursiveCheckBox)
+                    .addComponent(hiddenFileCheckBox))
             );
             
             //Define Action Listeners on the Search button
@@ -205,7 +209,7 @@ public class FileSearchUI {
 
             searchBtn.addActionListener(queryHandler);
             findText.addActionListener(queryHandler);
-            
+            searchPane.add(searchBtn);
             add(searchPane, BorderLayout.NORTH);
         }
         
@@ -288,6 +292,36 @@ public class FileSearchUI {
         
         private void constructStatusPane(){
             JPanel statusPane = new JPanel();
+            
+            /*//Uncomment this code block if sanp has to be taken
+            statusLabel.addMouseListener(new MouseListener(){
+
+                @Override
+                public void mouseClicked(MouseEvent mouseEvent) {
+                    takeSnap();
+                }
+
+                @Override
+                public void mousePressed(MouseEvent mouseEvent) {
+                    // TODO Implement this method
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent mouseEvent) {
+                    // TODO Implement this method
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent mouseEvent) {
+                    // TODO Implement this method
+                }
+
+                @Override
+                public void mouseExited(MouseEvent mouseEvent) {
+                    // TODO Implement this method
+                }
+            });
+            */
             statusPane.add(statusLabel);
             add(statusPane, BorderLayout.SOUTH);
         }
@@ -309,6 +343,9 @@ public class FileSearchUI {
             JOptionPane.showMessageDialog(MainSearchPane.this, errorMsg, "Error", JOptionPane.ERROR_MESSAGE);
         }
 
+        private void takeSnap(){
+            CommonUtils.takeSanpOfFrame(frame, "C:\\Users\\gunsrini.ORADEV\\Desktop\\filesearch.png");
+        }
         /**
          *Add a search result to ResultTableModel
          * @param docInfo
