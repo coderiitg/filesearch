@@ -63,7 +63,7 @@ public class IndexBuilder {
      * key - term
      * Value - Inverted Document Frequency value
      */
-    Map<String, Float> idfVector = new HashMap<String, Float>();
+    Map<String, Double> idfVector = new HashMap<String, Double>();
 
     /**
      * key - extension
@@ -71,7 +71,7 @@ public class IndexBuilder {
      */
     Map<String, Boolean> extensionBinary = new HashMap<String, Boolean>();
     
-    public Map<String, Float> getIdfVector() {
+    public Map<String, Double> getIdfVector() {
         return idfVector;
     }
 
@@ -270,7 +270,7 @@ public class IndexBuilder {
             int totalDocs = docIdInfoMap.keySet().size();
 
             for (String term : termDocCountMap.keySet()) {
-                float termWeight = CommonUtils.round(Math.log(totalDocs / termDocCountMap.get(term)), 4);
+                double termWeight = CommonUtils.round(Math.log(totalDocs / termDocCountMap.get(term)), 4);
                 idfVector.put(term, termWeight);
             }
         }

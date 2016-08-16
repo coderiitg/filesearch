@@ -29,7 +29,7 @@ public class CorpusType {
      * key - term
      * Value - Inverted Document Frequency value
      */
-    Map<String, Float> idfVector = null;
+    Map<String, Double> idfVector = null;
     
     int totalDocs = 0;
 
@@ -41,7 +41,7 @@ public class CorpusType {
     }
 
     public CorpusType(Map<Integer, DocInfo> docIdInfoMap,
-                      Map<String, Map<Integer, Integer>> invertedIndex, Map<String, Integer> termDocCountMap, Map<String, Float> idfVector) {
+                      Map<String, Map<Integer, Integer>> invertedIndex, Map<String, Integer> termDocCountMap, Map<String, Double> idfVector) {
         this.docIdInfoMap = docIdInfoMap;
         this.invertedIndex = invertedIndex;
         this.termDocCountMap = termDocCountMap;  
@@ -61,7 +61,7 @@ public class CorpusType {
         return termDocCountMap;
     }
     
-    public Map<String, Float> getIdfVector() {
+    public Map<String, Double> getIdfVector() {
         return idfVector;
     }
 }

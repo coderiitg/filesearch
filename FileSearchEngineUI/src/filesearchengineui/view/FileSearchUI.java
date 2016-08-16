@@ -415,7 +415,7 @@ public class FileSearchUI {
                         MainQueryProcess mainProc = new MainQueryProcess(projCorpusInfo);
 
                         //Query with search text and get the score for each document
-                        Map<Integer, Float> docScoreMap = mainProc.triggerQuery(searchText);
+                        Map<Integer, Double> docScoreMap = mainProc.triggerQuery(searchText);
 
                         if (docScoreMap == null || docScoreMap.isEmpty()) {
                             //TODO: Display one element indicating that no results could be found
@@ -423,7 +423,7 @@ public class FileSearchUI {
                         } else {
 
                             //Sort and fetch top few results
-                            Map<Integer, Float> sortedDocScoreMap =
+                            Map<Integer, Double> sortedDocScoreMap =
                                 CommonUtils.sortByValue(docScoreMap,
                                                         CommonConstants.MAX_DISP_RESULTS /*fetch top results*/);
                             //add the search results iteratively

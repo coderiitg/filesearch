@@ -1,6 +1,11 @@
 package filesearchengine.common;
 
+import java.awt.Frame;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+
 import java.io.File;
+import java.io.IOException;
 
 import java.math.BigDecimal;
 
@@ -17,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
+
+import javax.imageio.ImageIO;
 
 
 public class CommonUtils {
@@ -38,10 +45,10 @@ public class CommonUtils {
      * @param decimalPlace
      * @return
      */
-    public static float round(Double d, int decimalPlace) {
+    public static double round(Double d, int decimalPlace) {
         BigDecimal bd = new BigDecimal(Double.toString(d));
         bd = bd.setScale(decimalPlace, BigDecimal.ROUND_HALF_UP);
-        return bd.floatValue();
+        return bd.doubleValue();
     }
 
     /**
@@ -83,9 +90,9 @@ public class CommonUtils {
      * @param values
      * @return
      */
-    public static Double getMod(Collection<Float> values) {
+    public static Double getMod(Collection<Double> values) {
         Double sumSquares = 0d;
-        for (Float val : values) {
+        for (Double val : values) {
             sumSquares += val * val;
         }
 
@@ -98,27 +105,27 @@ public class CommonUtils {
      * @param b
      * @return
      */
-    public static Float getSimilarityScore(Map<String, Float> a, Map<String, Float> b) {
-        float dotProduct = 0;
+    public static Double getSimilarityScore(Map<String, Double> a, Map<String, Double> b) {
+        double dotProduct = 0;
         if (a != null && b != null && !a.isEmpty() && !b.isEmpty()) {
             for (String aKey : a.keySet()) {
-                Float aKeyVal = a.get(aKey);
-                Float bKeyVal = b.get(aKey);
+                Double aKeyVal = a.get(aKey);
+                Double bKeyVal = b.get(aKey);
                 if (bKeyVal == null) {
                     //indicates that aKey is not present in b
                     continue;
                 }
                 dotProduct += aKeyVal * bKeyVal;
             }
-            Collection<Float> aValues = a.values();
-            Collection<Float> bValues = b.values();
+            Collection<Double> aValues = a.values();
+            Collection<Double> bValues = b.values();
 
             if (dotProduct > 0) {
                 Double aMod = getMod(aValues);
                 Double bMod = getMod(bValues);
-                return (float) (dotProduct / (aMod * bMod));
+                return (dotProduct / (aMod * bMod));
             }
-            return 0f;
+            return 0d;
         }
         return null;
     }
@@ -318,5 +325,23 @@ public class CommonUtils {
             return isBlockBinary;
         }
         return false;
+    }
+    
+    /**
+     *Takes a snap of frame and stores it in the prescribed location
+     * @param frame
+     * @param location
+     */
+    public static void takeSanpOfFrame(Frame frame, String location){
+        try {
+            int w = frame.getWidth(), h = frame.getHeight();
+            BufferedImage image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g2 = image.createGraphics();
+            frame.paint(g2);
+            g2.dispose();
+            ImageIO.write(image, "png", new File(location));
+        } catch (IOException ioe) {
+            System.err.println(ioe);
+        }
     }
 }

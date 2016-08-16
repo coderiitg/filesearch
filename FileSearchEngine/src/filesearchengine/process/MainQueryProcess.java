@@ -16,13 +16,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MainQueryProcess {
     
     CorpusType corpusInfo = null;
-    Map<String, Float> queryWeightVector;
+    Map<String, Double> queryWeightVector;
     Set<String> queryTerms = new HashSet<String>();
     Map<String, Map<Integer, Integer>> invertedIndex = null;
     Integer totalDocs = null;
     Integer totalTerms = null;
     
-    Map<String, Float> idfVector;    
+    Map<String, Double> idfVector;    
 
     /*
      * key - term
@@ -33,34 +33,50 @@ public class MainQueryProcess {
     /*
      * key - DocId
      * Value - document vector
+     * This is accessed across multiple threads, hence the need for concurrency
      * */    
-    Map<Integer, Float> docScoreMap = new ConcurrentHashMap<Integer, Float>();
+    Map<Integer, Double> docScoreMap = new ConcurrentHashMap<Integer, Double>();
     
-
-        
+    
     /**
      *Get the Weight vector corresponding to the query
      * @param queryTerms - query
      * @param normalizedTokens - result will be returned in this parameter as set of normalized tokens
      * @return
      */
-    public Map<String, Float> getQueryWeightVector(String query, Set<String> normalizedTokens){
+    public Map<String, Double> getQueryWeightVector(String query){
         
         //weightVector has to be sorted based on Term value
-        Map<String, Float> queryWeightVector = new HashMap<String, Float>();
+        Map<String, Double> queryWeightVector = new HashMap<String, Double>();
         
         //tokenize the query and store in normalized Tokens
-        
         List<String> tokens = TokenNormalizer.getNormalizedTokens(query);
-        normalizedTokens.addAll(tokens);
         
-        //Construct the query vector
-        for (String term : normalizedTokens) {
-            if (termDocCountMap.containsKey(term)) { //check if this term is present in corpus
-                float weight = idfVector.get(term);
-                queryWeightVector.put(term, weight);
+        //term mapped with its frequency
+        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
+        for(String token: tokens){
+            if(termFreqMap.containsKey(token)){
+                //Increment the frequency
+                termFreqMap.put(token, termFreqMap.get(token) + 1);
+            }
+            else{//encountering this for the first time
+                termFreqMap.put(token, 1);
             }
         }
+        
+        //The term freq map need not be normalized as query vector is common for all documents
+        
+        //Construct the query vector
+        for (String term : termFreqMap.keySet()) {
+            if (termDocCountMap.containsKey(term)) { //check if this term is present in corpus
+                Double weight = idfVector.get(term);
+                //weight = tf*idf
+                queryWeightVector.put(term, termFreqMap.get(term)*weight);
+            }
+        }
+        
+        //set the global variable query terms
+        this.queryTerms.addAll(termFreqMap.keySet());
         
         return queryWeightVector;
     }
@@ -75,8 +91,11 @@ public class MainQueryProcess {
             this.threadIndex = threadIndex;
         }
         
-        Float getScore(int docId){
-            Map<String, Float> docWeightVector = new HashMap<String, Float>();
+        Double getScore(int docId){
+            Map<String, Integer> docTermFreqMap = new HashMap<String, Integer>();
+            //Construct the normalized term freq
+            
+            int sumFreqSquares = 0;
             
             for(String term : queryTerms){
                 Map<Integer, Integer> docIdFreqMap = invertedIndex.get(term);
@@ -85,14 +104,25 @@ public class MainQueryProcess {
                     Integer termFreqInDoc = docIdFreqMap.get(docId);    
                     //check whether this term is present in the document
                     if(termFreqInDoc != null){
-                        //weight = tf*idf
-                        float termWeightDoc = idfVector.get(term)*termFreqInDoc;
-                        docWeightVector.put(term, termWeightDoc);
+                        //Add it to sum of squares
+                        sumFreqSquares += termFreqInDoc*termFreqInDoc;
+                        docTermFreqMap.put(term, termFreqInDoc);
                     }
                 }
             }
-            if(!docWeightVector.isEmpty()){
-                Float similarityScore = CommonUtils.getSimilarityScore(queryWeightVector, docWeightVector);
+            
+            
+            if(!docTermFreqMap.isEmpty()){//check if atleast one term is present in the document
+                Double euclideanNorm = Math.sqrt(sumFreqSquares);
+                Map<String, Double> docTermWeightMap = new HashMap<String, Double>();
+                //Multiply docTermFreq vector with IDF
+                //TF*IDF
+                for(String term : docTermFreqMap.keySet()){
+                    docTermWeightMap.put(term, ((docTermFreqMap.get(term)*idfVector.get(term))/euclideanNorm));    
+                }
+                
+                
+                Double similarityScore = CommonUtils.getSimilarityScore(queryWeightVector, docTermWeightMap);
                 return similarityScore;
             }
             return null;
@@ -103,7 +133,7 @@ public class MainQueryProcess {
             for(Integer docId : docIdInfoMap.keySet()){
                 //Each docId has to be processed by a unique thread
                 if(docId % totalThreadCount == threadIndex){
-                    Float score = getScore(docId);
+                    Double score = getScore(docId);
                     if(score != null){
                         docScoreMap.put(docId, score);
                     }
@@ -125,9 +155,9 @@ public class MainQueryProcess {
         idfVector = corpusInfo.getIdfVector();
     }
     
-    public Map<Integer, Float> triggerQuery(String query){
+    public Map<Integer, Double> triggerQuery(String query){
         //Get the weight vector corresponding to the query
-        queryWeightVector = getQueryWeightVector(query, this.queryTerms);
+        queryWeightVector = getQueryWeightVector(query);
         
         if(queryWeightVector == null || queryWeightVector.isEmpty()){
             //Query is not present anywhere in the corpus

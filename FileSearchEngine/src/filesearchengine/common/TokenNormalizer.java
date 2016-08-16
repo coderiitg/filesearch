@@ -21,7 +21,7 @@ public class TokenNormalizer {
             
             //Assuming each word is on average 6, assigning an inital capacity
             List<String> normalizedTokens = new ArrayList<String>(wordLen/6);
-            for(String word : line.split("[\\p{P} \\|\\t\\n\\r]")){
+            for(String word : line.split("[\\p{Punct}\\p{Space}]")){
                 if(("").equals(word))//ignore
                     continue;
                 normalizedTokens.add(word);
