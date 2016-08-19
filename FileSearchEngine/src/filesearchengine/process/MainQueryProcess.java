@@ -18,6 +18,7 @@ public class MainQueryProcess {
     CorpusType corpusInfo = null;
     Map<String, Double> queryWeightVector;
     Set<String> queryTerms = new HashSet<String>();
+
     Map<String, Map<Integer, Integer>> invertedIndex = null;
     Integer totalDocs = null;
     Integer totalTerms = null;
@@ -37,6 +38,10 @@ public class MainQueryProcess {
      * */    
     Map<Integer, Double> docScoreMap = new ConcurrentHashMap<Integer, Double>();
     
+
+    public Set<String> getQueryTerms() {
+        return queryTerms;
+    }
     
     /**
      *Get the Weight vector corresponding to the query

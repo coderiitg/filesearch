@@ -10,10 +10,10 @@ import java.io.IOException;
 
 
 public class DocumentWrapper {
-    private String data;
-    private String filePath; //full path of document
+    protected String data;
+    protected String filePath; //full path of document
     //Is the file binary
-    private boolean fileBinary = false;
+    protected boolean fileBinary = false;
 
     public boolean isFileBinary() {
         return fileBinary;
