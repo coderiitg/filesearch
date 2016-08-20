@@ -1,7 +1,5 @@
 package filesearchengineui.model;
 
-import filesearchengine.common.CommonUtils;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -12,12 +10,14 @@ import java.io.IOException;
 public class DocumentWrapper {
     protected String data;
     protected String filePath; //full path of document
-    //Is the file binary
-    protected boolean fileBinary = false;
 
-    public boolean isFileBinary() {
-        return fileBinary;
+    public DocumentWrapper(String filePath) {
+        if (filePath == null) {
+            throw new RuntimeException("file path cannot be null");
+        }
+        this.filePath = filePath;
     }
+    
 
     @Override
     public String toString(){
@@ -29,7 +29,7 @@ public class DocumentWrapper {
      * @param filePath
      * @return
      */
-    private String readFile(String filePath) throws FileNotFoundException, IOException {
+    protected String readFile(String filePath) throws FileNotFoundException, IOException {
         StringBuilder sb = new StringBuilder(128);
 
         BufferedReader reader = null;
@@ -42,16 +42,6 @@ public class DocumentWrapper {
                 sb.append(line);
                 //Appending a new line character
                 sb.append("\n");
-            }
-            
-            int blockEnd = Math.min(sb.length(), 4096);
-            //Check whether the block is binary
-            fileBinary = CommonUtils.isBlockBinary(sb.substring(0, blockEnd));
-            
-            //If the file is binary then, data cannot be displayed on UI
-            if(fileBinary){
-                //file cannot be read
-                return null;
             }
             
             //If there is still some content to be read, append ...........
@@ -73,18 +63,9 @@ public class DocumentWrapper {
         return sb.toString();
     }
 
-    public DocumentWrapper(String filePath) {
-        if (filePath == null) {
-            this.filePath = "No results found for the query!!";
-            this.data = "No results found for the query!!";
-            return;
-        }
-        this.filePath = filePath;
-    }
-
     public String getData() {
         //Read the file if data is not already set and the file is not binary
-        if(data == null && !fileBinary){
+        if(data == null){
             try {
                 data = readFile(filePath);
             } catch (FileNotFoundException e) {

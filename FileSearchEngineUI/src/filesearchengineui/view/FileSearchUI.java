@@ -13,11 +13,14 @@ import filesearchengine.process.MainQueryProcess;
 
 import filesearchengineui.common.CommonConstants;
 
+import filesearchengineui.model.DocWrapperContentSearch;
+import filesearchengineui.model.DocWrapperFileSearch;
 import filesearchengineui.model.DocumentWrapper;
 import filesearchengineui.model.FileSizeWrapper;
 import filesearchengineui.model.ResultTableModel;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -61,6 +64,10 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultHighlighter;
+import javax.swing.text.Highlighter;
+import javax.swing.text.Highlighter.HighlightPainter;
 
 public class FileSearchUI {
 
@@ -70,6 +77,7 @@ public class FileSearchUI {
     }
 
     public final JFrame frame = new JFrame("Swift File Search");
+    
     public FileSearchUI() {
         
         EventQueue.invokeLater(new Runnable() {
@@ -243,22 +251,51 @@ public class FileSearchUI {
                 @Override
                 public void valueChanged(ListSelectionEvent e) {
                     if (!e.getValueIsAdjusting()) {
-                        DocumentWrapper docWrapper = (DocumentWrapper)resultTable.getValueAt(resultTable.getSelectedRow(), 1);
-                        
-                        //Set the file Content in the Content pane
-                        if (docWrapper != null) {
-                            String data = docWrapper.getData();
-                            if(data == null){
-                                if(docWrapper.isFileBinary()){
-                                    //If the file is of Binary type, then display an error message
-                                    displayError("The file format cannot be read by Swift File Search");
+                        int selectedRow = resultTable.getSelectedRow();//Get the selected row index
+                        //Proceed only if it's greater than -1
+                        if(selectedRow > -1){
+                            DocumentWrapper docWrapper = (DocumentWrapper)resultTable.getValueAt(selectedRow, 1);
+                            
+                            //Set the file Content in the Content pane
+                            if (docWrapper != null) {
+                                String data = docWrapper.getData();
+                                if(data == null){
+                                    //Check if the docWrapper is an instance of DocWrapperFileSearch
+                                    if((docWrapper instanceof DocWrapperFileSearch) && ((DocWrapperFileSearch)docWrapper).isFileBinary()){
+                                        //If the file is of Binary type, then display an error message
+                                        displayError("The file format cannot be read by Swift File Search");
+                                    }
                                 }
+                                else{
+                                    //Set the data
+                                    fileContent.setText(data);
+                                    //Highlight the query terms
+                                    if (docWrapper instanceof DocWrapperContentSearch) {
+                                        //Get the indices of terms
+                                        Map<String, List<Integer>> termIndicesMap =
+                                            ((DocWrapperContentSearch) docWrapper).getTermIndicesMap();
+                                        Highlighter highlighter = fileContent.getHighlighter();
+                                        HighlightPainter painter =
+                                            new DefaultHighlighter.DefaultHighlightPainter(Color.yellow);
+                                        
+                                        //Remove all the earlier highlights
+                                        highlighter.removeAllHighlights();
+
+                                        for(String term : termIndicesMap.keySet()){
+                                            int termLen = term.length();
+                                            for(int termIndex : termIndicesMap.get(term)){
+                                                try {
+                                                    highlighter.addHighlight(termIndex, termIndex + termLen, painter);
+                                                } catch (BadLocationException f) {
+                                                    ;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                fileContent.setText("");
                             }
-                            else{
-                                fileContent.setText(data);
-                            }
-                        } else {
-                            fileContent.setText("");
                         }
                     }
                 }
@@ -346,56 +383,22 @@ public class FileSearchUI {
         private void takeSnap(){
             CommonUtils.takeSanpOfFrame(frame, "C:\\Users\\gunsrini.ORADEV\\Desktop\\filesearch.png");
         }
-        /**
-         *Add a search result to ResultTableModel
-         * @param docInfo
-         */
-        private void addSearchResultToModel(DocInfo docInfo){
-            //{"Name", "Location", "Type", "Size", "Modified Date"}
-            //Get the full file path
-            String filePath = docInfo.getFilePath();
-            //Get the file name
-            String baseFileName = docInfo.getBaseFileName();
-            //get the file extension if any
-            String fileType = docInfo.getFileType();
-            //get the file size in bytes
-            long fileSize = docInfo.getFileSize();
-            //get the last modified date in millis
-            long lastModifiedDateMillis = docInfo.getLastModifiedDate();
-            DefaultTableModel resultTableModel = (DefaultTableModel) resultTable.getModel();
-            resultTableModel.addRow(new Object[] {
-                                    baseFileName, new DocumentWrapper(filePath), fileType,
-                                    new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
-            });
-        }
-        
-        /**
-         *Adds a search results to ResultTableModel(to be used when content search is performed)
-         * @param docIdSet
-         * @param docIdFileMap
-         */
-        private void addSearchResultsToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
-            for (Integer docId : docIdSet) {
-                DocInfo docInfo = docIdFileMap.get(docId);
-                if(docInfo != null){
-                    addSearchResultToModel(docInfo);
-                }
-            }
-        }
-        
-        /**
-         *Adds a search results to ResultTableModel(to be used when a FileName only search is performed)
-         * @param results
-         */
-        private void addSearchResultsToModel(List<DocInfo> results) {
-            int resultSize = results.size();
-            for (int i = 0; i < resultSize && i < CommonConstants.MAX_DISP_RESULTS; i++) {
-                addSearchResultToModel(results.get(i));
+
+        private void clearTable(DefaultTableModel tableModel){
+            //Get the current row count
+            int rowCount = tableModel.getRowCount();
+            for(int i=rowCount-1;i>=0;i--){
+                tableModel.removeRow(i);
             }
         }
         
         public class QueryBtnHandler implements ActionListener {
 
+            
+            private boolean fileOnlySearch = false;
+            //The query terms as a set
+            private Set<String> queryTerms = null;
+            
             @Override
             public void actionPerformed(ActionEvent e) {
                
@@ -412,19 +415,12 @@ public class FileSearchUI {
                     return;
                 }
 
-                //clear the file content area
-                fileContent.setText("");
+
                 
                 //Remove earlier search results
-                try {
-                    ((DefaultTableModel)(resultTable.getModel())).setRowCount(0);
-                } catch (IndexOutOfBoundsException ie) {
-                    //TODO: identify why the exception occurs
-                    System.out.println("Encountered an exception while clearing results: " + ie.getMessage());
-                    //Retrying the result clearing
-                    ((DefaultTableModel)(resultTable.getModel())).setRowCount(0);
-                }
-
+                clearTable((DefaultTableModel)(resultTable.getModel()));
+                //clear the file content area
+                fileContent.setText("");
                 
                 //Get the corpus info pertaining to the current directory alone
                 try {
@@ -446,6 +442,8 @@ public class FileSearchUI {
                     
                     //Index Re-building and query handling is handled only if SearchText is actually provided
                     if(!searchText.isEmpty()){
+                        //re-set the global variable
+                        fileOnlySearch = false;
                         //Get the dirPath sepcific Corpus Info
                         CorpusType projCorpusInfo = indexBuilder.getCorpusInfo(dirPath, searchParams);    
                         //Initialize the query process
@@ -453,7 +451,7 @@ public class FileSearchUI {
 
                         //Query with search text and get the score for each document
                         Map<Integer, Double> docScoreMap = mainProc.triggerQuery(searchText);
-
+                        this.queryTerms = mainProc.getQueryTerms();
                         if (docScoreMap == null || docScoreMap.isEmpty()) {
                             //TODO: Display one element indicating that no results could be found
                             statusLabel.setText("The search returned 0 results");
@@ -465,7 +463,7 @@ public class FileSearchUI {
                                                         CommonConstants.MAX_DISP_RESULTS /*fetch top results*/);
                             //add the search results iteratively
                             addSearchResultsToModel(sortedDocScoreMap.keySet(), projCorpusInfo.getDocIdInfoMap());
-                            int numDocsReturned = sortedDocScoreMap.keySet().size();
+                            int numDocsReturned = docScoreMap.keySet().size();
                             if (numDocsReturned <= CommonConstants.MAX_DISP_RESULTS) {
                                 statusLabel.setText("Found: " + numDocsReturned);
                             } else {
@@ -475,6 +473,11 @@ public class FileSearchUI {
                         }
                     }
                     else{//It's a file name only search
+                        //Set the global variables
+                        fileOnlySearch = true;
+                        //reset the query terms as this is filename only search
+                        this.queryTerms = null;
+                        
                         FileNameSearch fileNameSearchProc = new FileNameSearch();
                         //Get results through FileName only search
                         List<DocInfo> results = fileNameSearchProc.getFilesWithPattern(dirPath, searchParams);
@@ -502,6 +505,67 @@ public class FileSearchUI {
                     displayError(ex.getMessage());
                 }
                 
+            }
+            
+            /**
+             *Add a search result to ResultTableModel
+             * @param docInfo
+             */
+            private void addSearchResultToModel(DocInfo docInfo){
+                //{"Name", "Location", "Type", "Size", "Modified Date"}
+                //Get the full file path
+                String filePath = docInfo.getFilePath();
+                //Get the file name
+                String baseFileName = docInfo.getBaseFileName();
+                //get the file extension if any
+                String fileType = docInfo.getFileType();
+                //get the file size in bytes
+                long fileSize = docInfo.getFileSize();
+                //get the last modified date in millis
+                long lastModifiedDateMillis = docInfo.getLastModifiedDate();
+                DefaultTableModel resultTableModel = (DefaultTableModel) resultTable.getModel();
+                
+                //Creating a different instance of DocumentWrapper for different search modes
+                if(!fileOnlySearch){
+                    //This is a content based search
+                    resultTableModel.addRow(new Object[] {
+                                            baseFileName, new DocWrapperContentSearch(filePath, queryTerms), fileType,
+                                            new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
+                    });
+                }
+                else{
+                    //If it's a file only search
+                    resultTableModel.addRow(new Object[] {
+                                            baseFileName, new DocWrapperFileSearch(filePath), fileType,
+                                            new FileSizeWrapper(fileSize), new Date(lastModifiedDateMillis)
+                    });
+                }
+                
+            }
+            
+            /**
+             *Adds a search results to ResultTableModel(to be used when content search is performed)
+             * @param docIdSet
+             * @param docIdFileMap
+             */
+            private void addSearchResultsToModel(Set<Integer> docIdSet, Map<Integer, DocInfo> docIdFileMap) {
+                for (Integer docId : docIdSet) {
+                    DocInfo docInfo = docIdFileMap.get(docId);
+                    if(docInfo != null){
+                        addSearchResultToModel(docInfo);
+                    }
+                }
+            }
+            
+            /**
+             *Adds a search results to ResultTableModel(to be used when a FileName only search is performed)
+             * @param results
+             */
+            private void addSearchResultsToModel(List<DocInfo> results) {
+                int resultSize = results.size();
+                for (int i = 0; i < resultSize && i < CommonConstants.MAX_DISP_RESULTS; i++) {
+                    addSearchResultToModel(results.get(i));
+                }
             }
         }
     }

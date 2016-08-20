@@ -6,7 +6,7 @@ Swift File Search is an Index based file Search Utility that searches one or mor
 ![file search UI](screenshots/filesearch.png "file search UI")
 
 Following are some of the other features included:
-
+- Found text is shown highlighted in the content pane.
 - An option to skip sub-folders and only search for the files directly under a folder.
 - An option to skip the hidden files in the system while searching.
 - An option to only include files with specific extension(s)
