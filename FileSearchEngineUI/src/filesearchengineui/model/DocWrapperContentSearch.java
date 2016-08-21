@@ -86,6 +86,21 @@ public class DocWrapperContentSearch extends DocumentWrapper {
                     //Re-calculate the offset
                     offSet += line.length() + 1;
                 }
+                else{//The terms were not found
+                    if(sb.length() < 2048){
+                        //If we are still in the first block, append the string directly
+                        sb.append(line);
+                        sb.append("\n");
+                        //Re-calculate the offset
+                        offSet += line.length() + 1;
+                    }
+                    else if(sb.length() < 4096){
+                        sb.append("......................................................................................................................................\n");
+                        sb.append("......................................................................................................................................\n");
+                        //Re-calculate the offset
+                        offSet += 270;
+                    }
+                }
             }
 
         } finally {

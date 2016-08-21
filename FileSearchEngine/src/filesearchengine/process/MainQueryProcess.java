@@ -3,6 +3,7 @@ package filesearchengine.process;
 import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.DocInfo;
+import static filesearchengine.common.SearchEngineConstants.MATCH_ALL_TERMS;
 import filesearchengine.common.TokenNormalizer;
 
 import java.util.ArrayList;
@@ -15,28 +16,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MainQueryProcess {
     
-    CorpusType corpusInfo = null;
-    Map<String, Double> queryWeightVector;
-    Set<String> queryTerms = new HashSet<String>();
+    private CorpusType corpusInfo = null;
+    private Map<String, Double> queryWeightVector;
+    private Set<String> queryTerms = new HashSet<String>();
 
-    Map<String, Map<Integer, Integer>> invertedIndex = null;
-    Integer totalDocs = null;
-    Integer totalTerms = null;
+    private Map<String, Map<Integer, Integer>> invertedIndex = null;
+    private Integer totalDocs = null;
+    private Integer totalTerms = null;
     
-    Map<String, Double> idfVector;    
+    private Map<String, Double> idfVector;    
 
+    private Map<String, Object> searchParams; //search parameters
     /*
      * key - term
      * value - number of documents containing this term
      */
-    Map<String, Integer> termDocCountMap = null;
+    private Map<String, Integer> termDocCountMap = null;
     
     /*
      * key - DocId
      * Value - document vector
      * This is accessed across multiple threads, hence the need for concurrency
      * */    
-    Map<Integer, Double> docScoreMap = new ConcurrentHashMap<Integer, Double>();
+    private Map<Integer, Double> docScoreMap = new ConcurrentHashMap<Integer, Double>();
     
 
     public Set<String> getQueryTerms() {
@@ -96,6 +98,11 @@ public class MainQueryProcess {
             this.threadIndex = threadIndex;
         }
         
+        /**
+         *Returns the doc Score of the document, null if this document is not relevant
+         * @param docId
+         * @return
+         */
         Double getScore(int docId){
             Map<String, Integer> docTermFreqMap = new HashMap<String, Integer>();
             //Construct the normalized term freq
@@ -115,8 +122,12 @@ public class MainQueryProcess {
                     }
                 }
             }
-            
-            
+            //If all the terms have to be matched, proceed only if docTermFreqMap contains all terms
+            if((Boolean)searchParams.get(MATCH_ALL_TERMS)){
+                if(!docTermFreqMap.keySet().containsAll(queryTerms)){
+                    return null;
+                }
+            }
             if(!docTermFreqMap.isEmpty()){//check if atleast one term is present in the document
                 Double euclideanNorm = Math.sqrt(sumFreqSquares);
                 Map<String, Double> docTermWeightMap = new HashMap<String, Double>();
@@ -160,7 +171,9 @@ public class MainQueryProcess {
         idfVector = corpusInfo.getIdfVector();
     }
     
-    public Map<Integer, Double> triggerQuery(String query){
+    public Map<Integer, Double> triggerQuery(String query, Map<String, Object> searchParams){
+        //Initialize the search params
+        this.searchParams = searchParams;
         //Get the weight vector corresponding to the query
         queryWeightVector = getQueryWeightVector(query);
         

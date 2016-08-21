@@ -49,7 +49,7 @@ public class CMDQueryProcess {
         MainQueryProcess mainProc = new MainQueryProcess(corpusInfo);
         
         //Query with search terms
-        Map<Integer, Double> docScoreMap = mainProc.triggerQuery(args[1]);
+        Map<Integer, Double> docScoreMap = mainProc.triggerQuery(args[1], new HashMap<String,Object>());
         //Display result in order of relevance
         CMDQueryProcess.displayResult(CommonUtils.sortByValue(docScoreMap, 2/*fetch top results*/), corpusInfo.getDocIdInfoMap());
     }

@@ -4,6 +4,7 @@ import filesearchengine.common.CommonUtils;
 import filesearchengine.common.CorpusType;
 import filesearchengine.common.DocInfo;
 import static filesearchengine.common.SearchEngineConstants.FILENAME_PATTERN;
+import static filesearchengine.common.SearchEngineConstants.MATCH_ALL_TERMS;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
 
@@ -27,6 +28,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -108,8 +111,10 @@ public class FileSearchUI {
         JTextField fileNameText = new JTextField(20);
         JCheckBox recursiveCheckBox = new JCheckBox("Search subfolders");
         JCheckBox hiddenFileCheckBox = new JCheckBox("Skip hidden items");
+        JCheckBox matchAllTermsCheckBox = new JCheckBox("Match all terms");
         JButton searchBtn = new JButton("Search");
         JButton browseBtn = new JButton("Browse");
+        JButton resetBtn = new JButton("Reset");
         JFileChooser fileChooser = new JFileChooser();
 
         private JTable resultTable;
@@ -163,6 +168,9 @@ public class FileSearchUI {
             //check hidden item check by default
             hiddenFileCheckBox.setSelected(false);
             
+            //match all terms by default
+            matchAllTermsCheckBox.setSelected(true);
+            
             JLabel findLabel = new JLabel("Search text:");
             JLabel fileNameLabel = new JLabel("File name:");
             JLabel dirLabel = new JLabel("Look in:");
@@ -182,7 +190,8 @@ public class FileSearchUI {
                         .addComponent(browseBtn))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(recursiveCheckBox)
-                        .addComponent(hiddenFileCheckBox)))
+                        .addComponent(hiddenFileCheckBox)
+                        .addComponent(matchAllTermsCheckBox)))
             );
             
             //Ensure that text fields stay the same size
@@ -209,15 +218,21 @@ public class FileSearchUI {
                         .addComponent(browseBtn)))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(recursiveCheckBox)
-                    .addComponent(hiddenFileCheckBox))
+                    .addComponent(hiddenFileCheckBox)
+                    .addComponent(matchAllTermsCheckBox))
             );
             
             //Define Action Listeners on the Search button
             QueryBtnHandler queryHandler = new QueryBtnHandler();
 
             searchBtn.addActionListener(queryHandler);
-            findText.addActionListener(queryHandler);
+            
+            //findText.addActionListener(queryHandler);
             searchPane.add(searchBtn);
+            
+            //Define Action Listener on the Reset button
+            resetBtn.addActionListener(new ResetBtnHandler());
+            searchPane.add(resetBtn);
             add(searchPane, BorderLayout.NORTH);
         }
         
@@ -330,7 +345,7 @@ public class FileSearchUI {
         private void constructStatusPane(){
             JPanel statusPane = new JPanel();
             
-            /*//Uncomment this code block if sanp has to be taken
+            //Uncomment this code block if sanp has to be taken
             statusLabel.addMouseListener(new MouseListener(){
 
                 @Override
@@ -358,7 +373,7 @@ public class FileSearchUI {
                     // TODO Implement this method
                 }
             });
-            */
+            
             statusPane.add(statusLabel);
             add(statusPane, BorderLayout.SOUTH);
         }
@@ -428,12 +443,14 @@ public class FileSearchUI {
                     boolean recursiveSearch = recursiveCheckBox.isSelected();
                     //should hidden items be skipped
                     boolean skipHiddenItems = hiddenFileCheckBox.isSelected();
-                          
+                    //Should all terms be matched
+                    boolean matchAllTerms = matchAllTermsCheckBox.isSelected();
                     
                     //Build the search parameter map
                     Map<String, Object> searchParams = new HashMap<String, Object>();
                     searchParams.put(RECURSIVE_SEARCH, recursiveSearch);
                     searchParams.put(SKIP_HIDDEN_ITEMS, skipHiddenItems);
+                    searchParams.put(MATCH_ALL_TERMS, matchAllTerms);
                     
                     //Set the file name pattern only if it's not set
                     if(fileNamePattern != null){
@@ -450,7 +467,7 @@ public class FileSearchUI {
                         MainQueryProcess mainProc = new MainQueryProcess(projCorpusInfo);
 
                         //Query with search text and get the score for each document
-                        Map<Integer, Double> docScoreMap = mainProc.triggerQuery(searchText);
+                        Map<Integer, Double> docScoreMap = mainProc.triggerQuery(searchText, searchParams);
                         this.queryTerms = mainProc.getQueryTerms();
                         if (docScoreMap == null || docScoreMap.isEmpty()) {
                             //TODO: Display one element indicating that no results could be found
@@ -566,6 +583,19 @@ public class FileSearchUI {
                 for (int i = 0; i < resultSize && i < CommonConstants.MAX_DISP_RESULTS; i++) {
                     addSearchResultToModel(results.get(i));
                 }
+            }
+        }
+    
+        public class ResetBtnHandler implements ActionListener {
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                //Clear the results table
+                clearTable((DefaultTableModel)(resultTable.getModel()));
+                //clear the file content area
+                fileContent.setText("");
+                //Reset the status label
+                statusLabel.setText("");
             }
         }
     }

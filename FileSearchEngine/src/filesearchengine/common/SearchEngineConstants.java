@@ -7,4 +7,5 @@ public class SearchEngineConstants {
     public static final String EXTNS_SEARCH = "Extensions";
     public static final String FILENAME_PATTERN = "File Name";
     public static final String FILENAME_SEARCH_ONLY = "FileName Search Only";
+    public static final String MATCH_ALL_TERMS = "Match all terms";
 }
