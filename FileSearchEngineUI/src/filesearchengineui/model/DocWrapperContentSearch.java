@@ -70,7 +70,7 @@ public class DocWrapperContentSearch extends DocumentWrapper {
 
             int offSet = 0;
 
-            while (((line = reader.readLine()) != null) && (termIndicesMap.keySet().size() != queryTerms.size())) {
+            while (((line = reader.readLine()) != null) && (termIndicesMap.keySet().size() < queryTerms.size() || (sb.length() < 2048))) {
 
                 Map<String, List<Integer>> curTermIndicesMap =
                     StringSearchUtils.searchPatterns(line.toUpperCase(), queryTerms);

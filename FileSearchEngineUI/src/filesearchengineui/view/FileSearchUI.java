@@ -28,8 +28,6 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -42,6 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.swing.BorderFactory;
 import javax.swing.GroupLayout;
@@ -112,6 +112,7 @@ public class FileSearchUI {
         JCheckBox recursiveCheckBox = new JCheckBox("Search subfolders");
         JCheckBox hiddenFileCheckBox = new JCheckBox("Skip hidden items");
         JCheckBox matchAllTermsCheckBox = new JCheckBox("Match all terms");
+        JCheckBox regexForFileCheckBox = new JCheckBox("Regular Expression");
         JButton searchBtn = new JButton("Search");
         JButton browseBtn = new JButton("Browse");
         JButton resetBtn = new JButton("Reset");
@@ -184,7 +185,9 @@ public class FileSearchUI {
                     .addComponent(dirLabel))
                 .addGroup(layout.createParallelGroup(LEADING)
                     .addComponent(findText, 0, 800, Short.MAX_VALUE)
-                    .addComponent(fileNameText, 0, 800, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(fileNameText, 0, 800, Short.MAX_VALUE)
+                        .addComponent(regexForFileCheckBox))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(dirPathText, 0, 300, 725)
                         .addComponent(browseBtn))
@@ -197,7 +200,7 @@ public class FileSearchUI {
             //Ensure that text fields stay the same size
             
             //layout.linkSize(SwingConstants.HORIZONTAL, findText, dirPathText);
-            layout.linkSize(SwingConstants.HORIZONTAL, findText, fileNameText);
+            layout.linkSize(SwingConstants.HORIZONTAL, dirPathText, fileNameText);
             
             
             //Ensure that the buttons stay the same size
@@ -210,7 +213,9 @@ public class FileSearchUI {
                     .addComponent(findText))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(fileNameLabel)
-                    .addComponent(fileNameText))
+                    .addGroup(layout.createParallelGroup(BASELINE)
+                        .addComponent(fileNameText)
+                        .addComponent(regexForFileCheckBox)))
                 .addGroup(layout.createParallelGroup(BASELINE)
                     .addComponent(dirLabel)
                     .addGroup(layout.createParallelGroup(BASELINE)
@@ -331,6 +336,10 @@ public class FileSearchUI {
          */
         private void constructContentPane(){
             fileContent.setEditable(false);
+            //set wrap style as word
+            fileContent.setWrapStyleWord(true);
+            //set line wrapping
+            fileContent.setLineWrap(true);
             JScrollPane contentPane = new JScrollPane(fileContent);
             //TitledBorder for ContentPane
             TitledBorder contentPaneTitle =
@@ -346,6 +355,7 @@ public class FileSearchUI {
             JPanel statusPane = new JPanel();
             
             //Uncomment this code block if sanp has to be taken
+            /*
             statusLabel.addMouseListener(new MouseListener(){
 
                 @Override
@@ -373,7 +383,7 @@ public class FileSearchUI {
                     // TODO Implement this method
                 }
             });
-            
+            */
             statusPane.add(statusLabel);
             add(statusPane, BorderLayout.SOUTH);
         }
@@ -419,9 +429,9 @@ public class FileSearchUI {
                
                 String searchText = findText.getText().trim();
                 String dirPath = dirPathText.getText();
-                String fileNamePattern = fileNameText.getText().trim();
+                String fileNamePatternText = fileNameText.getText().trim();
                 
-                if (searchText.isEmpty() && fileNamePattern.isEmpty()) {
+                if (searchText.isEmpty() && fileNamePatternText.isEmpty()) {
                     displayError("Either one of Search Text and File Name is mandatory");
                     return;
                 }
@@ -430,21 +440,39 @@ public class FileSearchUI {
                     return;
                 }
 
-
+                //Should subfolders be checked
+                boolean recursiveSearch = recursiveCheckBox.isSelected();
+                //should hidden items be skipped
+                boolean skipHiddenItems = hiddenFileCheckBox.isSelected();
+                //Should all terms be matched
+                boolean matchAllTerms = matchAllTermsCheckBox.isSelected();
                 
+                //Is file name provided as a regular expression
+                boolean isFileNameRegEx = regexForFileCheckBox.isSelected();
+                
+                Pattern fileNamePattern = null;
+                try{
+                    if(!isFileNameRegEx){
+                        //Quote the pattern if it is not a regular expression
+                        fileNamePattern = Pattern.compile(Pattern.quote(fileNamePatternText), Pattern.CASE_INSENSITIVE);                
+                    }
+                    else{
+                        fileNamePattern = Pattern.compile(fileNamePatternText, Pattern.CASE_INSENSITIVE);                
+                    }
+                }
+                catch(PatternSyntaxException pse){
+                    displayError(pse.getLocalizedMessage());
+                    return;
+                }
                 //Remove earlier search results
                 clearTable((DefaultTableModel)(resultTable.getModel()));
                 //clear the file content area
                 fileContent.setText("");
-                
+                //Set the status as in progress
+                statusLabel.setText("Search is in progress...");
                 //Get the corpus info pertaining to the current directory alone
                 try {
-                    //Should subfolders be checked
-                    boolean recursiveSearch = recursiveCheckBox.isSelected();
-                    //should hidden items be skipped
-                    boolean skipHiddenItems = hiddenFileCheckBox.isSelected();
-                    //Should all terms be matched
-                    boolean matchAllTerms = matchAllTermsCheckBox.isSelected();
+                    
                     
                     //Build the search parameter map
                     Map<String, Object> searchParams = new HashMap<String, Object>();

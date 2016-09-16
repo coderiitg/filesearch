@@ -282,7 +282,7 @@ public class IndexBuilder {
         private Set<String> selectedExtns = CustomFileFilter.allSuppExtns;
         
         //File Name pattern if any
-        private String fileNamePattern = null;
+        private Pattern fileNamePattern = null;
         
         //Stores the list of files indexed in this re-build index process
         private Set<Integer> curIndexedFiles = new HashSet<Integer>();
@@ -297,7 +297,7 @@ public class IndexBuilder {
             this.skipHidden = (Boolean)searchParams.get(SKIP_HIDDEN_ITEMS);
             this.selectedExtns = (Set<String>)searchParams.get(EXTNS_SEARCH);
             //If the fileName parameter is not provided, this will be NULL
-            this.fileNamePattern = (String)searchParams.get(FILENAME_PATTERN);
+            this.fileNamePattern = (Pattern)searchParams.get(FILENAME_PATTERN);
         }
         
         /**
@@ -347,8 +347,11 @@ public class IndexBuilder {
                         //check if file name also has to be matched
                         if (fileNamePattern != null) {
                             //Ignore if the current file doesn't match the pattern
-                            if (!Pattern.compile(Pattern.quote(fileNamePattern),
+                            /*if (!Pattern.compile(Pattern.quote(fileNamePattern),
                                                  Pattern.CASE_INSENSITIVE).matcher(fileName).find()) {
+                                continue;
+                            }*/
+                            if (!fileNamePattern.matcher(fileName).find()) {
                                 continue;
                             }
                         }

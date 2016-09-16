@@ -19,7 +19,7 @@ public class FileNameSearch {
     private boolean skipHidden = false;
     private boolean recurse = true;
 
-    private String fileNamePattern = null;
+    private Pattern fileNamePattern = null;
 
     public FileNameSearch() {
         super();
@@ -41,8 +41,7 @@ public class FileNameSearch {
                     String fileName = childFile.getName();
 
                     //Ignore if the current file name doesn't match the pattern
-                    if (!Pattern.compile(Pattern.quote(fileNamePattern),
-                                         Pattern.CASE_INSENSITIVE).matcher(fileName).find()) {
+                    if (!fileNamePattern.matcher(fileName).find()) {
                         continue;
                     }
 
@@ -72,7 +71,7 @@ public class FileNameSearch {
         this.recurse = (Boolean) searchParams.get(RECURSIVE_SEARCH);
         this.skipHidden = (Boolean) searchParams.get(SKIP_HIDDEN_ITEMS);
         //If the fileName parameter is not provided, this will be NULL
-        this.fileNamePattern = (String) searchParams.get(FILENAME_PATTERN);
+        this.fileNamePattern = (Pattern) searchParams.get(FILENAME_PATTERN);
 
         //Call read Files which actually iterates through folder
         File rootDir = new File(rootDirFullPath);
