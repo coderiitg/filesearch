@@ -6,6 +6,7 @@ import filesearchengine.common.CustomFileFilter;
 import filesearchengine.common.DocInfo;
 import static filesearchengine.common.SearchEngineConstants.EXTNS_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.FILENAME_PATTERN;
+import static filesearchengine.common.SearchEngineConstants.MAX_CORPUS_SIZE;
 import static filesearchengine.common.SearchEngineConstants.RECURSIVE_SEARCH;
 import static filesearchengine.common.SearchEngineConstants.SKIP_HIDDEN_ITEMS;
 import filesearchengine.common.TokenNormalizer;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -237,33 +239,36 @@ public class IndexBuilder {
     }
 
     /**
-     *Removes any deleted files in the system from the corpus
+     *This method is to be called when the corpus size goes beond a certain limit,
+     * It will remove all the references to the files within the dirPath which are not being immediately used
+     * for searching the file pattern, thus reducing the corpus size
      * @param dirPath
-     * @param retainFiles
+     * @param curIndexedFiles
      * @param recursiveSearch
      */
-    /* TODO:// change implementation
-    private void cleanupDelFilesInDir(String dirPath, Set<String> retainFiles,
-                                     boolean recursiveSearch) {
+    private void cleanupUnusedFilesInDir(String dirPath, Set<Integer> curIndexedFiles,
+                                      boolean recursiveSearch) {
         //Get the submap of the all the files indexed under dirPath
         final Map<String, Integer> fileDocIdSubMap =
             CommonUtils.fetchFileDocIdSubMap((SortedMap<String, Integer>) fileDocIdMap, dirPath, recursiveSearch);
 
         if (fileDocIdSubMap != null && !fileDocIdSubMap.isEmpty()) {
-            //Get the indexed files list in the dir
-            Set<String> indexedFilesOfDir = new TreeSet<String>(fileDocIdSubMap.keySet());
-            //Remove the retainFiles list from it as it is sure that they are in storage
-            indexedFilesOfDir.removeAll(retainFiles);
-
-            if (indexedFilesOfDir != null && !indexedFilesOfDir.isEmpty()) {
-                //deleted files are present in indexedFilesOfDir
-                for (String indexedFilePath : indexedFilesOfDir) {
-                    remFileFromIndex(indexedFilePath);
-                }
+            
+            //clone the fileDocIdSubMap's values
+            //This is a set of previoulsy indexed docIds in the directory
+            Set<Integer> docIdsToRemove = new HashSet<Integer>(fileDocIdSubMap.values());
+            
+            //Retain all the currently indexed files
+            docIdsToRemove.removeAll(curIndexedFiles);
+            
+            for (int docIdToRemove : docIdsToRemove) {
+                //Get the file path assigned
+                String indexedFilePath = docIdInfoMap.get(docIdToRemove).getFilePath();
+                //Remove the file from corpus
+                remFileFromIndex(indexedFilePath);
             }
         }
     }
-    */
     
     private void constructIDFVector() {
         if (termDocCountMap != null && !termDocCountMap.isEmpty()) {
@@ -312,10 +317,10 @@ public class IndexBuilder {
             //call the re-build process starting from rootDir
             reBuild(rootDir);
             
-            /*TODO:// decide when to cleanup deleted files
-            //Cleanup deleted files if any
-            cleanupDelFilesInDir(rootDirFullPath, curIndexedFiles, recursiveSearch);
-            */
+            //TODO:// devise a better strategy for cleaning up least frequently accessed files
+            if(fileDocIdMap.size() > MAX_CORPUS_SIZE)
+                cleanupUnusedFilesInDir(rootDirFullPath, curIndexedFiles, recurse);
+            
             
             //Re-construct IDF vector
             constructIDFVector();
@@ -404,25 +409,10 @@ public class IndexBuilder {
                 }
             }
         }
+    
+        
     }
     
-    /*
-    public void displayIndex() {
-        System.out.println("***********BEGIN Inverted Index CONTENT***********");
-        if (invertedIndex != null && !invertedIndex.isEmpty()) {
-            for (String term : invertedIndex.keySet()) {
-                System.out.print(term + " => ");
-                //Iterate through docIdFreqMap
-                Map<Integer, Integer> docIdFreqMap = invertedIndex.get(term);
-                for (Integer docId : docIdFreqMap.keySet()) {
-                    System.out.print("{" + docId + ":" + docIdFreqMap.get(docId) + "}, ");
-                }
-                System.out.println();
-            }
-        }
-        System.out.println("***********END Inverted Index CONTENT***********");
-    }
-    */
 
     /**
      *

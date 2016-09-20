@@ -189,7 +189,6 @@ public class CommonUtils {
      * @param recursiveSearch
      * @return
      */
-    /*
     public static Map<String, Integer> fetchFileDocIdSubMap(SortedMap<String, Integer> fileDocIdMap, String dirPath,
                                                             boolean recursiveSearch) {
         //Returns the submap which contains information about all the files and sub directories
@@ -221,7 +220,6 @@ public class CommonUtils {
         }
         return fileDocIdSubMap;
     }
-    */
     
     /**
      * Extracts docIdInfoSubMap corresponding to docIds
