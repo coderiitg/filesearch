@@ -18,7 +18,7 @@
 
   <build>
     <plugins>
-<!--
+
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -29,7 +29,7 @@
           </arguments>
         </configuration>
       </plugin>
--->
+
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
