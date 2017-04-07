@@ -13,7 +13,7 @@ Following are some of the major features available:
 - An option to only include files with a specific extension through the "File name" search field.(for e.g .txt will match all the text files).
 
 
-###Running Swift File Search
+### Running Swift File Search
 1. Download the runnable jar from [here](target/fileSearch-1.0-jar-with-dependencies.jar).
 2. Run the command *java -jar fileSearch-1.0-jar-with-dependencies.jar* 
 
